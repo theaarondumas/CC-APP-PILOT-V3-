@@ -1,25 +1,19 @@
 :root{
-  /* Backdrop + layout */
-  --bg0:#07090b;                 /* deepest black */
-  --panel:rgba(255,255,255,.045);
+  /* Backdrop */
+  --bg0:#07090b;
   --stroke:rgba(255,255,255,.10);
-
-  /* Text */
   --text:#eaf2f7;
   --muted:rgba(234,242,247,.65);
 
-  /* Enterprise accents (subtle, not neon) */
-  --accentSoft: rgba(255,255,255,.08);
-  --accentEdge: rgba(255,255,255,.14);
+  /* Enterprise active highlight (subtle) */
+  --accentSoft: rgba(255,255,255,.10);
 
-  /* NEW: Sticker colors (lock these) */
-  --lime:#B9D62C;                /* SUPPLIES */
-  --orange:#F2A12B;              /* MEDS */
+  /* LOCKED STICKERS */
+  --lime:#B9D62C;     /* supplies */
+  --orange:#F2A12B;   /* meds */
 
-  /* Soft status hues (used for toggles/badges only) */
-  --successGreenSoft: rgba(185,214,44,.18);  /* lime-based */
-  --infoSoft: rgba(255,255,255,.10);
-
+  /* Status */
+  --successSoft: rgba(185,214,44,.18);
   --verifiRed:#b00000;
 }
 
@@ -55,6 +49,16 @@ body{
 }
 .pill--outline{ background: transparent; }
 
+/* AT RISK button */
+.pill--risk{
+  border-color: rgba(176,0,0,.55);
+  background: rgba(176,0,0,.14);
+  color: #ffdada;
+  font-weight: 1000;
+  letter-spacing: .6px;
+}
+.pill--risk:active{ transform: scale(.98); }
+
 .pill--toggle{ position:relative; padding:10px 10px; gap:10px; }
 .pill--toggle input{ display:none; }
 .toggleTrack{
@@ -72,44 +76,24 @@ body{
 #showAllToggle:checked + .toggleTrack::after{ left:20px; }
 .toggleLabel{ color:var(--muted); font-weight:900; }
 
-/* LIME GLOW when window open (enterprise subtle) */
+/* Window open glow (lime-aligned) */
 #readyToggle:checked + .toggleTrack{
-  background: var(--successGreenSoft);
+  background: var(--successSoft);
   border-color: rgba(185,214,44,.55);
   box-shadow: 0 0 0 1px rgba(185,214,44,.28), 0 0 14px rgba(185,214,44,.22);
 }
 #readyToggle:checked + .toggleTrack::after{ background: rgba(255,255,255,.95); }
 
 /* Segmented */
-.seg{
-  display:flex;
-  border:1px solid var(--stroke);
-  border-radius:14px;
-  overflow:hidden;
-  background: rgba(255,255,255,.04);
-}
+.seg{ display:flex; border:1px solid var(--stroke); border-radius:14px; overflow:hidden; background: rgba(255,255,255,.04); }
 .segBtn{
-  padding:10px 12px;
-  font-weight:1000;
-  font-size:13px;
-  color: var(--muted);
-  background: transparent;
-  border:none;
-  cursor:pointer;
+  padding:10px 12px; font-weight:1000; font-size:13px;
+  color: var(--muted); background: transparent; border:none; cursor:pointer;
 }
-.segBtn.active{
-  background: rgba(255,255,255,.10);
-  color: var(--text);
-}
+.segBtn.active{ background: var(--accentSoft); color: var(--text); }
 
 /* PANELS */
-.panel{
-  background: var(--panel);
-  border:1px solid var(--stroke);
-  border-radius:16px;
-  padding:12px;
-  margin-bottom:14px;
-}
+.panel{ background: rgba(255,255,255,.045); border:1px solid var(--stroke); border-radius:16px; padding:12px; margin-bottom:14px; }
 .panelRow{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
 .panelTitle{ font-weight:1000; }
 .panelSub{ color:var(--muted); font-size:12px; text-align:right; }
@@ -129,28 +113,25 @@ body{
   font-size:12px;
   cursor:pointer;
 }
-.tab.active{ background: rgba(255,255,255,.10); }
+.tab.active{ background: var(--accentSoft); }
 
 .select{
-  width:100%;
-  border-radius:14px;
-  padding:10px 12px;
+  width:100%; border-radius:14px; padding:10px 12px;
   border:1px solid var(--stroke);
   background: rgba(255,255,255,.04);
   color: var(--text);
   font-weight:900;
 }
 
-.addCartRow{ display:flex; gap:10px; margin-top:12px; }
+.addCartRow{ display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
 .cartInput{
-  flex:1;
-  padding:10px 12px;
-  border-radius:14px;
+  flex:1; padding:10px 12px; border-radius:14px;
   border:1px solid var(--stroke);
   background: rgba(255,255,255,.04);
   color: var(--text);
   font-weight:900;
   font-size:14px;
+  min-width: 220px;
 }
 
 .toolbarRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
@@ -158,24 +139,13 @@ body{
 
 /* IMPACT */
 .impactRow{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin: 6px 0 12px; }
-.impactCard{
-  border:1px solid var(--stroke);
-  background: rgba(255,255,255,.04);
-  border-radius:14px;
-  padding:10px;
-  text-align:center;
-}
+.impactCard{ border:1px solid var(--stroke); background: rgba(255,255,255,.04); border-radius:14px; padding:10px; text-align:center; }
 .impactLabel{ color: var(--muted); font-size:11px; font-weight:900; margin-bottom:6px; }
 .impactValue{ font-weight:1000; font-size:16px; }
 
 /* CARTS */
 .cartList{ display:flex; flex-direction:column; gap:14px; margin-bottom:14px; }
-.cartCard{
-  border:1px solid var(--stroke);
-  border-radius:18px;
-  padding:12px;
-  background: rgba(255,255,255,.02);
-}
+.cartCard{ border:1px solid var(--stroke); border-radius:18px; padding:12px; background: rgba(255,255,255,.02); }
 .cartCard.current{
   border-color: rgba(255,255,255,.22);
   box-shadow: 0 0 0 2px rgba(255,255,255,.06), 0 18px 40px rgba(0,0,0,.25);
@@ -183,24 +153,10 @@ body{
 .cartHeader{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:10px; }
 .cartTitle{ font-weight:1000; font-size:16px; }
 .cartSub{ color: var(--muted); font-size:12px; margin-top:2px; }
-.iconBtn{
-  border:1px solid var(--stroke);
-  background: rgba(255,255,255,.04);
-  color: var(--text);
-  border-radius:12px;
-  padding:8px 10px;
-  font-weight:900;
-  cursor:pointer;
-}
+.iconBtn{ border:1px solid var(--stroke); background: rgba(255,255,255,.04); color: var(--text); border-radius:12px; padding:8px 10px; font-weight:900; cursor:pointer; }
 
-/* STICKERS (keep your existing class names) */
-.sticker{
-  border-radius:18px;
-  padding:16px 16px 14px;
-  box-shadow: 0 18px 40px rgba(0,0,0,.38);
-  border: 1px solid rgba(0,0,0,.12);
-  margin-top:10px;
-}
+/* STICKERS */
+.sticker{ border-radius:18px; padding:16px 16px 14px; box-shadow: 0 18px 40px rgba(0,0,0,.38); border: 1px solid rgba(0,0,0,.10); margin-top:10px; }
 .sticker--lime{ background: var(--lime); color:#0a0b0c; }
 .sticker--orange{ background: var(--orange); color:#0a0b0c; }
 
