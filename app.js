@@ -1,18 +1,13 @@
-/* app.js (DROP IN)
-   PRODUCTION + VERIFI button (red, all caps) + scroll to setup + security gate
-*/
+/* app.js (DROP IN) — All current features + sort toggle + auto-scroll to first NON-COMPLIANT when switching to By risk */
 
 const $ = (id) => document.getElementById(id);
 
 const LOCAL_KEY_TECH = "verifi_pilot_round_v1";
 const LOCAL_KEY_NURSE = "verifi_pilot_nurse_log_v1";
 
-/* ---------------------------
-   Toast
---------------------------- */
+/* Toast */
 const toastEl = $("toast");
 let toastTimer = null;
-
 function showToast(msg) {
   if (!toastEl) return;
   toastEl.textContent = String(msg || "");
@@ -21,18 +16,10 @@ function showToast(msg) {
   toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1600);
 }
 
-/* ---------------------------
-   iOS-proof scroll helper
---------------------------- */
+/* iOS-proof scroll helper */
 function scrollToEl(el) {
   if (!el) return;
-
-  try {
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  } catch {
-    try { el.scrollIntoView(true); } catch {}
-  }
-
+  try { el.scrollIntoView({ behavior: "smooth", block: "start" }); } catch { try { el.scrollIntoView(true); } catch {} }
   setTimeout(() => {
     try {
       const y = el.getBoundingClientRect().top + window.scrollY - 12;
@@ -41,14 +28,11 @@ function scrollToEl(el) {
   }, 60);
 }
 
-/* ---------------------------
-   NAV
---------------------------- */
+/* NAV */
 const techView = $("techView");
 const nursingView = $("nursingView");
 const navTech = $("navTech");
 const navNursing = $("navNursing");
-
 function showScreen(screen) {
   if (screen === "nursing") {
     techView?.classList.add("hidden");
@@ -62,26 +46,20 @@ function showScreen(screen) {
     navTech?.classList.add("active");
   }
 }
-
 navTech?.addEventListener("click", () => showScreen("tech"));
 navNursing?.addEventListener("click", () => showScreen("nursing"));
 
-/* ===========================
-   TECH MODULE
-=========================== */
+/* TECH refs */
 const cartTypeTabs = $("cartTypeTabs");
 const departmentSelect = $("departmentSelect");
 const cartNumberInput = $("cartNumberInput");
 const addCartBtn = $("addCartBtn");
 const clearRoundBtn = $("clearRoundBtn");
 const exportJsonBtn = $("exportJsonBtn");
-
 const readyToggle = $("readyToggle");
 const windowMeta = $("windowMeta");
-
 const roundMeta = $("roundMeta");
 const cartList = $("cartList");
-
 const setupPanel = $("verificationSetupPanel");
 
 const nursingMeta = $("nursingMeta");
@@ -90,18 +68,18 @@ const nursingLogPrintContainer = $("nursingLogPrintContainer");
 const showAllToggle = $("showAllToggle");
 const printPdfBtn = $("printPdfBtn");
 
+const sortEntryBtn = $("sortEntryBtn");
+const sortRiskBtn = $("sortRiskBtn");
+
 const metricGaps = $("metricGaps");
 const metricPaper = $("metricPaper");
 const metricMoney = $("metricMoney");
 
 let showAll = false;
 let currentCartIndex = -1;
+let cartSortMode = "entry"; // "entry" | "risk"
 
-const IMPACT = {
-  costPerPage: 0.06,
-  minutesSavedPerVerified: 2.0,
-  laborCostPerHour: 35
-};
+const IMPACT = { costPerPage: 0.06, minutesSavedPerVerified: 2.0, laborCostPerHour: 35 };
 
 let round = {
   cartType: "Adult – Towers",
@@ -140,9 +118,7 @@ const DEPARTMENTS = {
   ]
 };
 
-/* ---------------------------
-   Paper pages per verification
---------------------------- */
+/* Pages per verification */
 const DEFAULT_PAGES_PER_VERIFICATION = 2;
 const PAPER_PAGES_BY_DEPT = {
   "ICU Pavilion — Pav A": 3,
@@ -165,9 +141,7 @@ function pagesPerVerificationForCart(cart) {
   return PAPER_PAGES_BY_DEPT[dept] ?? DEFAULT_PAGES_PER_VERIFICATION;
 }
 
-/* ---------------------------
-   Helpers
---------------------------- */
+/* Time + money helpers */
 function formatTimeHM(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -193,16 +167,14 @@ function inferVerificationEventType(isoOpenedAt) {
   return d.getDay() === 3 ? "Routine weekly" : "Post-use update";
 }
 
+/* Window state */
 function isWindowOpen() {
   return !!round.verificationWindowOpenedAt && !round.verificationWindowClosedAt;
 }
 
-/* ---------------------------
-   SECURITY GATE: close window before export/print
---------------------------- */
+/* Security gate: close window before export/print */
 function requireClosedWindowOrConfirm(actionLabel = "submit") {
   if (!isWindowOpen()) return true;
-
   const ok = confirm(
     `Verification Window is still OPEN.\n\nFor security and audit integrity, please CLOSE the Verification Window before you ${actionLabel}.\n\nClose it now?`
   );
@@ -210,71 +182,52 @@ function requireClosedWindowOrConfirm(actionLabel = "submit") {
 
   round.verificationWindowClosedAt = new Date().toISOString();
   if (readyToggle) readyToggle.checked = false;
-
   saveTechToLocal();
   renderTechAll();
   showToast("Window closed.");
   return true;
 }
 
-/* ---------------------------
-   Cart model
---------------------------- */
+/* Cart model */
 function newCart(cartNo) {
   return {
     cartType: round.cartType,
     department: round.department,
     cartNo: String(cartNo).trim(),
-
     supplyName: "",
     supplyExp: "",
     checkDate: "",
     checkedBy: "",
-
     shift: "",
-
     issue: false,
     issueNote: "",
-
     drugExp: "",
     drugName: "",
-
     verifiedAt: null,
     lastEditedAt: null
   };
 }
 
-/* ---------------------------
-   Strict verification
---------------------------- */
+/* Strict verification */
 function isCartVerified(cart) {
   const checkedByOk = !!String(cart.checkedBy || "").trim();
   const checkDateOk = !!String(cart.checkDate || "").trim();
   const shiftOk = !!String(cart.shift || "").trim();
-
   const supplyExpOk = !!String(cart.supplyExp || "").trim();
   const supplyNameOk = !!String(cart.supplyName || "").trim();
-
   const drugExpOk = !!String(cart.drugExp || "").trim();
   const drugNameOk = !!String(cart.drugName || "").trim();
-
   return checkedByOk && checkDateOk && shiftOk && supplyExpOk && supplyNameOk && drugExpOk && drugNameOk;
 }
-
 function stampEdit(cart) {
   cart.lastEditedAt = new Date().toISOString();
-  if (isCartVerified(cart) && !cart.verifiedAt) {
-    cart.verifiedAt = new Date().toISOString();
-  }
+  if (isCartVerified(cart) && !cart.verifiedAt) cart.verifiedAt = new Date().toISOString();
 }
 
-/* ---------------------------
-   Verified late
---------------------------- */
+/* Verified late */
 function isVerifiedLate(cart) {
   if (!cart?.verifiedAt) return false;
   if (!round?.verificationWindowClosedAt) return false;
-
   const v = new Date(cart.verifiedAt).getTime();
   const c = new Date(round.verificationWindowClosedAt).getTime();
   if (Number.isNaN(v) || Number.isNaN(c)) return false;
@@ -289,9 +242,7 @@ function verifiedLateDelta(cart) {
   return formatLateDelta(v - c);
 }
 
-/* ---------------------------
-   Risk logic
---------------------------- */
+/* Expiry risk */
 const DUE_SOON_DAYS = 30;
 function parseISODate(iso) {
   if (!iso) return null;
@@ -316,18 +267,50 @@ function computeExpiryRisk(cart) {
   const s = parseISODate(cart.supplyExp);
   const d = parseISODate(cart.drugExp);
   const next = earliestDate(s, d);
-
   if (!next) return { level: "dueSoon" };
-
   const daysLeft = daysBetween(today, next);
   if (daysLeft < 0) return { level: "overdue" };
   if (daysLeft <= DUE_SOON_DAYS) return { level: "dueSoon" };
   return { level: "ok" };
 }
 
-/* ---------------------------
-   Status mapping
---------------------------- */
+/* Enterprise badge wording + days remaining */
+function dateRiskLabel(dateStr) {
+  if (!dateStr) return { cls: "", label: "—" };
+  const d = new Date(dateStr + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return { cls: "", label: "—" };
+
+  const today = startOfToday();
+  const daysLeft = daysBetween(today, d);
+
+  if (daysLeft < 0) {
+    const over = Math.abs(daysLeft);
+    return { cls: "expired", label: `NON-COMPLIANT · ${over} DAY${over === 1 ? "" : "S"} OVER` };
+  }
+  if (daysLeft <= DUE_SOON_DAYS) {
+    return { cls: "soon", label: `ATTENTION REQUIRED · ${daysLeft} DAY${daysLeft === 1 ? "" : "S"}` };
+  }
+  return { cls: "good", label: "COMPLIANT" };
+}
+
+function updateStickerBadges(cardEl, cart) {
+  const supply = dateRiskLabel(cart.supplyExp);
+  const drug = dateRiskLabel(cart.drugExp);
+
+  const supplyEl = cardEl.querySelector(".supplyRiskBadge");
+  const drugEl = cardEl.querySelector(".drugRiskBadge");
+
+  if (supplyEl) {
+    supplyEl.className = `expBadge ${supply.cls}`;
+    supplyEl.textContent = supply.label;
+  }
+  if (drugEl) {
+    drugEl.className = `expBadge ${drug.cls}`;
+    drugEl.textContent = drug.label;
+  }
+}
+
+/* Status mapping (summary pills) */
 function computeVerificationPill(cart) {
   const verified = isCartVerified(cart);
   if (!verified) return { level: "notVerified", pill: "Not verified", cls: "notVerified" };
@@ -348,9 +331,63 @@ function isException(cart) {
   return computeVerificationPill(cart).level !== "verified";
 }
 
-/* ---------------------------
-   iOS keyboard fix helpers
---------------------------- */
+/* Risk sort helpers (highest risk first) */
+function earliestExpiryDate(cart) {
+  const s = parseISODate(cart.supplyExp);
+  const d = parseISODate(cart.drugExp);
+  return earliestDate(s, d);
+}
+function daysLeftToEarliestExpiry(cart) {
+  const next = earliestExpiryDate(cart);
+  if (!next) return Number.POSITIVE_INFINITY;
+  return daysBetween(startOfToday(), next);
+}
+function riskSortScore(cart) {
+  // 0 = NON-COMPLIANT (issue or expired)
+  if (cart.issue) return 0;
+  const risk = computeExpiryRisk(cart);
+  if (risk.level === "overdue") return 0;
+
+  // 1 = ATTENTION REQUIRED (due soon)
+  if (risk.level === "dueSoon") return 1;
+
+  // 2 = NOT VERIFIED
+  if (!isCartVerified(cart)) return 2;
+
+  // 3 = VERIFIED LATE
+  if (isVerifiedLate(cart)) return 3;
+
+  // 4 = VERIFIED
+  return 4;
+}
+function sortByHighestRiskFirst(a, b) {
+  const sa = riskSortScore(a);
+  const sb = riskSortScore(b);
+  if (sa !== sb) return sa - sb;
+
+  const da = daysLeftToEarliestExpiry(a);
+  const db = daysLeftToEarliestExpiry(b);
+  if (da !== db) return da - db;
+
+  const dep = String(a.department || "").localeCompare(String(b.department || ""));
+  if (dep !== 0) return dep;
+  return String(a.cartNo || "").localeCompare(String(b.cartNo || ""));
+}
+
+/* Auto-scroll to first NON-COMPLIANT after switching to By risk */
+function scrollToFirstNonCompliantCard() {
+  const indices = round.carts.map((_, i) => i);
+  indices.sort((ia, ib) => sortByHighestRiskFirst(round.carts[ia], round.carts[ib]));
+  const firstNonCompliantIndex = indices.find(i => riskSortScore(round.carts[i]) === 0);
+  if (firstNonCompliantIndex === undefined) return;
+
+  setTimeout(() => {
+    const el = cartList?.querySelector(`.cartCard[data-index="${firstNonCompliantIndex}"]`);
+    if (el) scrollToEl(el);
+  }, 80);
+}
+
+/* Update just header + badges without full re-render on typing */
 function updateCartHeaderStatus(cardEl, cart) {
   const subEl = cardEl.querySelector(".cartSub");
   if (!subEl) return;
@@ -366,26 +403,19 @@ function updateCartHeaderStatus(cardEl, cart) {
 
 function renderAfterEdit(cardEl, cart) {
   updateCartHeaderStatus(cardEl, cart);
+  updateStickerBadges(cardEl, cart);
   renderRoundMeta();
   renderTechNursingLog();
   renderImpactMetrics();
   saveTechToLocal();
 }
 
-/* ---------------------------
-   Render: window meta
---------------------------- */
+/* Render: window meta line */
 function renderWindowMeta() {
   if (!windowMeta) return;
 
-  const opened = round.verificationWindowOpenedAt
-    ? `Started ${formatTimeHM(round.verificationWindowOpenedAt)}`
-    : "";
-
-  const closed = round.verificationWindowClosedAt
-    ? `Ended ${formatTimeHM(round.verificationWindowClosedAt)}`
-    : "";
-
+  const opened = round.verificationWindowOpenedAt ? `Started ${formatTimeHM(round.verificationWindowOpenedAt)}` : "";
+  const closed = round.verificationWindowClosedAt ? `Ended ${formatTimeHM(round.verificationWindowClosedAt)}` : "";
   const openState = isWindowOpen() ? "Active" : "";
   const eventType = round.verificationEventType || "";
 
@@ -393,45 +423,31 @@ function renderWindowMeta() {
   windowMeta.textContent = parts.length ? parts.join(" • ") : "";
 }
 
-/* ---------------------------
-   Render: department options + meta
---------------------------- */
+/* Department options + meta */
 function renderDepartmentOptions() {
   const opts = DEPARTMENTS[round.cartType] || [];
   if (!departmentSelect) return;
 
   departmentSelect.innerHTML = opts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
-
-  if (!opts.includes(round.department)) {
-    round.department = opts[0] || "";
-  }
+  if (!opts.includes(round.department)) round.department = opts[0] || "";
   departmentSelect.value = round.department;
 }
-
 function renderRoundMeta() {
   const c = round.carts.length;
   if (!roundMeta) return;
-  roundMeta.textContent = c === 0
-    ? "No carts in progress"
-    : `${round.cartType} • ${round.department} • ${c} cart${c > 1 ? "s" : ""}`;
+  roundMeta.textContent = c === 0 ? "No carts in progress" : `${round.cartType} • ${round.department} • ${c} cart${c > 1 ? "s" : ""}`;
 }
 
-/* ---------------------------
-   Auto-open window on first add
---------------------------- */
+/* Auto-open window on first add */
 function openVerificationWindowIfNeeded() {
   if (isWindowOpen()) return;
-
   round.verificationWindowOpenedAt = new Date().toISOString();
   round.verificationWindowClosedAt = null;
   round.verificationEventType = inferVerificationEventType(round.verificationWindowOpenedAt);
-
   if (readyToggle) readyToggle.checked = true;
 }
 
-/* ---------------------------
-   CRUD
---------------------------- */
+/* CRUD */
 function addCart(cartNo) {
   const cleaned = String(cartNo).trim();
   if (!cleaned) {
@@ -440,11 +456,7 @@ function addCart(cartNo) {
     return;
   }
 
-  const dup = round.carts.some(c =>
-    c.cartNo === cleaned &&
-    c.department === round.department &&
-    c.cartType === round.cartType
-  );
+  const dup = round.carts.some(c => c.cartNo === cleaned && c.department === round.department && c.cartType === round.cartType);
   if (dup) {
     if (cartNumberInput) {
       cartNumberInput.value = "";
@@ -454,9 +466,7 @@ function addCart(cartNo) {
     return;
   }
 
-  if (round.carts.length === 0) {
-    openVerificationWindowIfNeeded();
-  }
+  if (round.carts.length === 0) openVerificationWindowIfNeeded();
 
   round.carts.push(newCart(cleaned));
   currentCartIndex = round.carts.length - 1;
@@ -469,12 +479,12 @@ function addCart(cartNo) {
   saveTechToLocal();
   renderTechAll();
 
+  // Auto-scroll to newest sticker
   setTimeout(() => {
-    const cards = cartList?.querySelectorAll(".cartCard");
-    const last = cards?.[cards.length - 1];
-    if (last) {
-      scrollToEl(last);
-      const firstField = last.querySelector(".supplyName");
+    const el = cartList?.querySelector(`.cartCard[data-index="${currentCartIndex}"]`);
+    if (el) {
+      scrollToEl(el);
+      const firstField = el.querySelector(".supplyName");
       if (firstField) setTimeout(() => firstField.focus(), 200);
     }
   }, 60);
@@ -493,19 +503,15 @@ function removeCart(index) {
   renderTechAll();
 }
 
-/* ---------------------------
-   Shift + issue wiring
---------------------------- */
+/* Shift + issue wiring */
 function wireShiftButtons(cart, cardEl) {
   const buttons = cardEl.querySelectorAll(".shiftBtn");
   buttons.forEach(btn => {
     btn.addEventListener("click", () => {
       cart.shift = btn.getAttribute("data-shift");
       stampEdit(cart);
-
       buttons.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-
       renderAfterEdit(cardEl, cart);
     });
   });
@@ -524,17 +530,15 @@ function syncIssueUI(cart, cardEl) {
 
   const apply = () => {
     cart.issue = issueCheckbox.checked;
-
     if (cart.issue) {
       noteRow.classList.remove("hidden");
-      cardEl.style.outline = "4px solid rgba(244,162,27,.55)";
+      cardEl.style.outline = "4px solid rgba(176,0,0,.20)";
     } else {
       noteRow.classList.add("hidden");
       cart.issueNote = "";
       noteInput.value = "";
       cardEl.style.outline = "none";
     }
-
     stampEdit(cart);
     renderAfterEdit(cardEl, cart);
   };
@@ -551,16 +555,10 @@ function syncIssueUI(cart, cardEl) {
   apply();
 }
 
-/* ---------------------------
-   Cards
---------------------------- */
+/* Card HTML (with badges + VERIFI) */
 function cartCardHTML(cart, index, isCurrent = false) {
   const status = computeVerificationPill(cart);
-
-  const verifiedAtTime = cart.verifiedAt
-    ? new Date(cart.verifiedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    : "";
-
+  const verifiedAtTime = cart.verifiedAt ? new Date(cart.verifiedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
   const statusLine = `${status.pill}${verifiedAtTime ? ` · ${verifiedAtTime}` : ""}`;
 
   return `
@@ -576,7 +574,10 @@ function cartCardHTML(cart, index, isCurrent = false) {
       </div>
 
       <section class="sticker sticker--lime">
-        <div class="sticker__title">Crash Cart Check</div>
+        <div class="stickerHeaderRow">
+          <div class="sticker__title">Crash Cart Check</div>
+          <span class="expBadge supplyRiskBadge">—</span>
+        </div>
         <div class="sticker__rule"></div>
 
         <div class="formRow">
@@ -617,7 +618,7 @@ function cartCardHTML(cart, index, isCurrent = false) {
         </div>
 
         <div class="issueNoteRow ${cart.issue ? "" : "hidden"}">
-          <input class="issueNoteInput" maxlength="60"
+          <input class="issueNoteInput" maxlength="80"
             placeholder="Add note (optional)"
             value="${escapeHtml(cart.issueNote || "")}"
           />
@@ -625,7 +626,10 @@ function cartCardHTML(cart, index, isCurrent = false) {
       </section>
 
       <section class="sticker sticker--orange">
-        <div class="sticker__titleSmall">Crash Cart Check</div>
+        <div class="stickerHeaderRow">
+          <div class="sticker__titleSmall">Crash Cart Check</div>
+          <span class="expBadge drugRiskBadge">—</span>
+        </div>
         <div class="sticker__rule"></div>
 
         <div class="formRow">
@@ -648,22 +652,31 @@ function cartCardHTML(cart, index, isCurrent = false) {
   `;
 }
 
+/* Render cart cards with sort mode */
 function renderCartCards() {
   if (!cartList) return;
 
-  cartList.innerHTML = round.carts
-    .map((c, i) => cartCardHTML(c, i, i === currentCartIndex))
+  const indices = round.carts.map((_, i) => i);
+  if (cartSortMode === "risk") {
+    indices.sort((ia, ib) => sortByHighestRiskFirst(round.carts[ia], round.carts[ib]));
+  }
+
+  cartList.innerHTML = indices
+    .map((i) => cartCardHTML(round.carts[i], i, i === currentCartIndex))
     .join("");
 
   cartList.querySelectorAll(".cartCard").forEach((cardEl) => {
     const idx = Number(cardEl.getAttribute("data-index"));
     const cart = round.carts[idx];
 
+    // init badges
+    updateStickerBadges(cardEl, cart);
+
     cardEl.querySelector(".removeBtn")?.addEventListener("click", () => removeCart(idx));
 
     const supplyName = cardEl.querySelector(".supplyName");
     const supplyExp = cardEl.querySelector(".supplyExp");
-    const checkDate = cardEl.querySelector(".checkDate");
+    const checkDate = cardEl.querySelector ".checkDate";
     const checkedBy = cardEl.querySelector(".checkedBy");
     const drugExp = cardEl.querySelector(".drugExp");
     const drugName = cardEl.querySelector(".drugName");
@@ -707,27 +720,21 @@ function renderCartCards() {
     wireShiftButtons(cart, cardEl);
     syncIssueUI(cart, cardEl);
 
-    // VERIFI button -> save + scroll to setup + focus Cart ID
-    const verifiBtn = cardEl.querySelector(".saveStickerBtn");
-    verifiBtn?.addEventListener("click", () => {
+    // VERIFI button: save + scroll to setup + focus cart ID
+    cardEl.querySelector(".saveStickerBtn")?.addEventListener("click", () => {
       stampEdit(cart);
       saveTechToLocal();
       showToast("VERIFIED ✓");
-
       const target = setupPanel || cartTypeTabs?.closest(".panel") || cartTypeTabs;
-      if (target) {
-        setTimeout(() => {
-          scrollToEl(target);
-          setTimeout(() => cartNumberInput?.focus(), 200);
-        }, 60);
-      }
+      setTimeout(() => {
+        scrollToEl(target);
+        setTimeout(() => cartNumberInput?.focus(), 200);
+      }, 60);
     });
   });
 }
 
-/* ---------------------------
-   Summary table
---------------------------- */
+/* Summary table render helpers */
 function groupByDepartment(rows) {
   const map = new Map();
   rows.forEach(r => {
@@ -740,14 +747,12 @@ function groupByDepartment(rows) {
 
 function renderNursingTable(targetEl, rows) {
   if (!targetEl) return;
-
   if (rows.length === 0) {
     targetEl.innerHTML = `<div style="color:rgba(234,242,247,.65); padding:10px;">No issues detected.</div>`;
     return;
   }
 
   const groups = groupByDepartment(rows);
-
   targetEl.innerHTML = groups.map(([dept, items]) => {
     const tableRows = items.map(cart => {
       const status = computeVerificationPill(cart);
@@ -757,7 +762,6 @@ function renderNursingTable(targetEl, rows) {
       const checkDate = cart.checkDate || "—";
       const shift = cart.shift || "—";
       const noteIcon = cart.issue && cart.issueNote ? " 📝" : "";
-
       return `
         <tr>
           <td>${escapeHtml(cart.cartNo || "—")}</td>
@@ -787,23 +791,19 @@ function renderNursingTable(targetEl, rows) {
   }).join("");
 }
 
+/* Summary list: auto-sort highest risk first */
 function renderTechNursingLog() {
   const scoped = round.carts.filter(c => c.cartType === round.cartType);
-  const rows = showAll ? scoped : scoped.filter(isException);
+  let rows = showAll ? scoped : scoped.filter(isException);
+  rows = rows.slice().sort(sortByHighestRiskFirst);
 
   let meta = showAll ? "Showing all" : "Showing exceptions only";
-
-  const openedAt = round.verificationWindowOpenedAt
-    ? `Started ${formatTimeHM(round.verificationWindowOpenedAt)}`
-    : "";
-  const closedAt = round.verificationWindowClosedAt
-    ? `Ended ${formatTimeHM(round.verificationWindowClosedAt)}`
-    : "";
-
+  const openedAt = round.verificationWindowOpenedAt ? `Started ${formatTimeHM(round.verificationWindowOpenedAt)}` : "";
+  const closedAt = round.verificationWindowClosedAt ? `Ended ${formatTimeHM(round.verificationWindowClosedAt)}` : "";
   const windowLine = [openedAt, closedAt].filter(Boolean).join(" • ");
   if (windowLine) meta += ` • ${windowLine}`;
-
   if (nursingMeta) nursingMeta.textContent = meta;
+
   renderNursingTable(nursingLogContainer, rows);
 }
 
@@ -811,41 +811,30 @@ function renderTechNursingLogForPrint() {
   $("printCartType").textContent = round.cartType;
 
   const generated = new Date().toLocaleString();
-  const openedAt = round.verificationWindowOpenedAt
-    ? `Started ${formatTimeHM(round.verificationWindowOpenedAt)}`
-    : "";
-  const closedAt = round.verificationWindowClosedAt
-    ? `Ended ${formatTimeHM(round.verificationWindowClosedAt)}`
-    : "";
+  const openedAt = round.verificationWindowOpenedAt ? `Started ${formatTimeHM(round.verificationWindowOpenedAt)}` : "";
+  const closedAt = round.verificationWindowClosedAt ? `Ended ${formatTimeHM(round.verificationWindowClosedAt)}` : "";
   const eventType = round.verificationEventType || "";
   const windowLine = [eventType, openedAt, closedAt].filter(Boolean).join(" • ");
   const suffix = windowLine ? ` • ${windowLine}` : "";
-
   $("printGeneratedAt").textContent = generated + suffix;
 
   const scoped = round.carts.filter(c => c.cartType === round.cartType);
-  const rows = showAll ? scoped : scoped.filter(isException);
+  let rows = showAll ? scoped : scoped.filter(isException);
+  rows = rows.slice().sort(sortByHighestRiskFirst);
   renderNursingTable(nursingLogPrintContainer, rows);
 }
 
-/* ---------------------------
-   Impact metrics
---------------------------- */
+/* Impact metrics */
 function countGapsSurfaced(carts) {
   let gaps = 0;
-  carts.forEach(c => {
-    const s = computeVerificationPill(c);
-    if (s.level !== "verified") gaps += 1;
-  });
+  carts.forEach(c => { if (computeVerificationPill(c).level !== "verified") gaps += 1; });
   return gaps;
 }
-
 function renderImpactMetrics() {
   if (!metricGaps || !metricPaper || !metricMoney) return;
 
   const all = round.carts;
   const verified = all.filter(isCartVerified);
-
   const gaps = countGapsSurfaced(all);
   const paperAvoided = verified.reduce((sum, cart) => sum + pagesPerVerificationForCart(cart), 0);
 
@@ -858,14 +847,11 @@ function renderImpactMetrics() {
   metricMoney.textContent = formatMoney(totalSaved);
 }
 
-/* ---------------------------
-   Local save/load
---------------------------- */
+/* Local save/load */
 function migrateRound(parsed) {
   if (typeof parsed.verificationWindowOpenedAt === "undefined") parsed.verificationWindowOpenedAt = null;
   if (typeof parsed.verificationWindowClosedAt === "undefined") parsed.verificationWindowClosedAt = null;
   if (typeof parsed.verificationEventType === "undefined") parsed.verificationEventType = "Unspecified";
-
   if (Array.isArray(parsed.carts)) {
     parsed.carts.forEach(c => {
       if (typeof c.verifiedAt === "undefined") c.verifiedAt = null;
@@ -874,17 +860,10 @@ function migrateRound(parsed) {
   }
   return parsed;
 }
-
 function saveTechToLocal() {
-  try {
-    localStorage.setItem(LOCAL_KEY_TECH, JSON.stringify(round));
-    return true;
-  } catch {
-    showToast("⚠️ Auto-save failed (storage blocked).");
-    return false;
-  }
+  try { localStorage.setItem(LOCAL_KEY_TECH, JSON.stringify(round)); return true; }
+  catch { showToast("⚠️ Auto-save failed (storage blocked)."); return false; }
 }
-
 function loadTechFromLocal() {
   try {
     const raw = localStorage.getItem(LOCAL_KEY_TECH);
@@ -895,18 +874,6 @@ function loadTechFromLocal() {
     return true;
   } catch { return false; }
 }
-
-function loadNurseFromLocal() {
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY_NURSE);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.rows)) return false;
-    nurseLog = parsed;
-    return true;
-  } catch { return false; }
-}
-
 function downloadJSON(data, filename = "verifi_verification_record.json") {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -919,9 +886,7 @@ function downloadJSON(data, filename = "verifi_verification_record.json") {
   URL.revokeObjectURL(url);
 }
 
-/* ---------------------------
-   Main render
---------------------------- */
+/* Main render */
 function renderTechAll() {
   renderWindowMeta();
   renderDepartmentOptions();
@@ -931,9 +896,23 @@ function renderTechAll() {
   renderImpactMetrics();
 }
 
-/* ---------------------------
-   Events
---------------------------- */
+/* Sort toggle handlers */
+sortEntryBtn?.addEventListener("click", () => {
+  cartSortMode = "entry";
+  sortEntryBtn.classList.add("active");
+  sortRiskBtn?.classList.remove("active");
+  renderCartCards();
+});
+
+sortRiskBtn?.addEventListener("click", () => {
+  cartSortMode = "risk";
+  sortRiskBtn.classList.add("active");
+  sortEntryBtn?.classList.remove("active");
+  renderCartCards();
+  scrollToFirstNonCompliantCard();
+});
+
+/* Core events */
 cartTypeTabs?.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-type]");
   if (!btn) return;
@@ -954,9 +933,7 @@ departmentSelect?.addEventListener("change", () => {
 });
 
 addCartBtn?.addEventListener("click", () => addCart(cartNumberInput.value));
-cartNumberInput?.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") addCart(cartNumberInput.value);
-});
+cartNumberInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") addCart(cartNumberInput.value); });
 
 clearRoundBtn?.addEventListener("click", () => {
   if (!confirm("Reset this verification? This clears all carts on this screen.")) return;
@@ -972,7 +949,6 @@ exportJsonBtn?.addEventListener("click", () => {
 
   const all = round.carts;
   const verified = all.filter(isCartVerified);
-
   const exportRecord = {
     ...round,
     impact: {
@@ -982,7 +958,6 @@ exportJsonBtn?.addEventListener("click", () => {
       assumptions: { ...IMPACT }
     }
   };
-
   downloadJSON(exportRecord, `verifi_GLOBAL_verification_record.json`);
   showToast("Exported JSON.");
 });
@@ -1000,7 +975,6 @@ printPdfBtn?.addEventListener("click", () => {
 
 readyToggle?.addEventListener("change", () => {
   const open = readyToggle.checked;
-
   if (open) {
     round.verificationWindowOpenedAt = new Date().toISOString();
     round.verificationWindowClosedAt = null;
@@ -1018,7 +992,7 @@ readyToggle?.addEventListener("change", () => {
 });
 
 /* ===========================
-   NURSING MODULE
+   NURSING MODULE (paper-style)
 =========================== */
 const nurseUnitName = $("nurseUnitName");
 const nurseMonth = $("nurseMonth");
@@ -1068,6 +1042,16 @@ function saveNurseToLocal() {
   nurseLog.month = nurseMonth?.value || "";
   try { localStorage.setItem(LOCAL_KEY_NURSE, JSON.stringify(nurseLog)); } catch {}
   if (nursePaperMeta) nursePaperMeta.textContent = `Saved • ${nurseLog.rows.length} row(s)`;
+}
+function loadNurseFromLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY_NURSE);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.rows)) return false;
+    nurseLog = parsed;
+    return true;
+  } catch { return false; }
 }
 
 function renderNurseTable(targetEl, rows, isPrint=false) {
@@ -1151,9 +1135,7 @@ nursePrintBtn?.addEventListener("click", () => {
   window.print();
 });
 
-/* ---------------------------
-   Utilities
---------------------------- */
+/* Utilities */
 function escapeHtml(str) {
   return String(str ?? "")
     .replaceAll("&", "&amp;")
@@ -1163,16 +1145,12 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
-/* ---------------------------
-   Init
---------------------------- */
+/* INIT */
 (function init() {
-  // Tech
   loadTechFromLocal();
   renderDepartmentOptions();
 
   if (!round.department) round.department = (DEPARTMENTS[round.cartType] || [])[0] || "";
-
   document.querySelectorAll("#cartTypeTabs .tab").forEach(t => t.classList.remove("active"));
   document.querySelector(`#cartTypeTabs .tab[data-type="${CSS.escape(round.cartType)}"]`)?.classList.add("active");
   if (departmentSelect) departmentSelect.value = round.department;
@@ -1180,14 +1158,12 @@ function escapeHtml(str) {
   currentCartIndex = round.carts.length ? round.carts.length - 1 : -1;
 
   if (readyToggle) readyToggle.checked = isWindowOpen();
-
   if (round.verificationWindowOpenedAt && (!round.verificationEventType || round.verificationEventType === "Unspecified")) {
     round.verificationEventType = inferVerificationEventType(round.verificationWindowOpenedAt);
   }
 
   renderTechAll();
 
-  // Nursing
   loadNurseFromLocal();
   if (!nurseLog.month) {
     const now = new Date();
