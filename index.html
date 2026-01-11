@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Verifi — Verification Required (Crash Carts)</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=206" />
 </head>
 
 <body>
@@ -55,6 +55,9 @@
           <div>
             <div class="fieldLabel">🏥 Department / Area</div>
             <select id="departmentSelect" class="select"></select>
+
+            <div class="fieldLabel" style="margin-top:10px;">Tech name (for export)</div>
+            <input id="techNameInput" class="cartInput" placeholder="e.g., Aaron Dumas" />
           </div>
         </div>
 
@@ -76,9 +79,11 @@
           <button id="atRiskBtn" class="pill pill--risk" type="button" title="Jump to the first at-risk cart">AT RISK</button>
         </div>
 
+        <!-- EXPORTS -->
         <div class="toolbarRow noPrint">
           <button id="clearRoundBtn" class="pill pill--outline" type="button">Clear Verification</button>
           <button id="exportJsonBtn" class="pill pill--outline" type="button">Export Verification Record (JSON)</button>
+          <button id="exportShareBtn" class="pill pill--outline" type="button">Export to Shared Folder</button>
         </div>
 
         <div class="miniHint">
@@ -199,6 +204,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <!-- IMPORTANT: bump v= if Safari caches -->
-  <script src="app.js?v=203"></script>
+  <script src="app.js?v=206"></script>
 </body>
 </html>
