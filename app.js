@@ -1,12 +1,11 @@
 /* ===========================
    Verifi — Crash Cart Verification
-   Includes MAIN KEYBOARD FIX:
-   - No full re-render on each keystroke (keeps iOS keyboard open)
-   UI upgrades added:
-   - Mission-critical Verification Window panel
-   - Toast + inline status feedback
-   - Primary action emphasis
-   - Autofocus Cart ID when window opens
+   - No full re-render on keystroke (keeps iOS keyboard open)
+   - Cart ID uses number pad
+   - Auto-save on sticker edits
+   - Add cart auto-scrolls to new sticker (batch-friendly)
+   - First add auto-opens verification window
+   - Newest cart is highlighted as current
    =========================== */
 
 const $ = (id) => document.getElementById(id);
@@ -15,7 +14,7 @@ const LOCAL_KEY_TECH = "verifi_pilot_round_v1";
 const LOCAL_KEY_NURSE = "verifi_pilot_nurse_log_v1";
 
 /* ---------------------------
-   Simple feedback UI
+   Toast + inline status
 --------------------------- */
 const toastEl = $("toast");
 let toastTimer = null;
@@ -55,7 +54,6 @@ function showScreen(screen) {
     navTech.classList.add("active");
   }
 }
-
 navTech.addEventListener("click", () => showScreen("tech"));
 navNursing.addEventListener("click", () => showScreen("nursing"));
 
@@ -67,7 +65,6 @@ const departmentSelect = $("departmentSelect");
 const cartNumberInput = $("cartNumberInput");
 const addCartBtn = $("addCartBtn");
 const clearRoundBtn = $("clearRoundBtn");
-const saveRoundBtn = $("saveRoundBtn");
 const exportJsonBtn = $("exportJsonBtn");
 
 const readyToggle = $("readyToggle");
@@ -82,6 +79,8 @@ const nursingLogPrintContainer = $("nursingLogPrintContainer");
 const showAllToggle = $("showAllToggle");
 const printPdfBtn = $("printPdfBtn");
 
+const scanBtn = $("scanBtn");
+
 // Window UI
 const windowPanel = $("windowPanel");
 const windowStatusPill = $("windowStatusPill");
@@ -92,7 +91,7 @@ const metricPaper = $("metricPaper");
 const metricMoney = $("metricMoney");
 
 let showAll = false;
-let verificationWindowOpen = false;
+let currentCartIndex = -1;
 
 const IMPACT = {
   costPerPage: 0.06,
@@ -218,7 +217,7 @@ function newCart(cartNo) {
 }
 
 /* ---------------------------
-   Strict verification (2B)
+   Strict verification
 --------------------------- */
 function isCartVerified(cart) {
   const checkedByOk = !!String(cart.checkedBy || "").trim();
@@ -242,7 +241,7 @@ function stampEdit(cart) {
 }
 
 /* ---------------------------
-   Verified late (strict)
+   Verified late
 --------------------------- */
 function isVerifiedLate(cart) {
   if (!cart?.verifiedAt) return false;
@@ -322,7 +321,7 @@ function isException(cart) {
 }
 
 /* ---------------------------
-   KEYBOARD FIX: no full re-render on typing
+   KEYBOARD FIX helpers
 --------------------------- */
 function updateCartHeaderStatus(cardEl, cart) {
   const subEl = cardEl.querySelector(".cartSub");
@@ -346,7 +345,21 @@ function renderAfterEdit(cardEl, cart) {
 }
 
 /* ---------------------------
-   Render: window meta (global)
+   Verification window behavior
+--------------------------- */
+function openVerificationWindowIfNeeded() {
+  const isOpen = !!round.verificationWindowOpenedAt && !round.verificationWindowClosedAt;
+  if (isOpen) return;
+
+  round.verificationWindowOpenedAt = new Date().toISOString();
+  round.verificationWindowClosedAt = null;
+  round.verificationEventType = inferVerificationEventType(round.verificationWindowOpenedAt);
+
+  if (readyToggle) readyToggle.checked = true;
+}
+
+/* ---------------------------
+   Render: window meta
 --------------------------- */
 function renderWindowMeta() {
   if (!windowMeta) return;
@@ -370,13 +383,10 @@ function renderWindowMeta() {
 
 function renderVerificationWindowUI() {
   const isOpen = !!round.verificationWindowOpenedAt && !round.verificationWindowClosedAt;
-  verificationWindowOpen = isOpen;
 
   if (readyToggle) readyToggle.checked = isOpen;
 
-  if (windowPanel) {
-    windowPanel.classList.toggle("open", isOpen);
-  }
+  if (windowPanel) windowPanel.classList.toggle("open", isOpen);
 
   if (windowStatusPill) {
     windowStatusPill.className = `statusPill ${isOpen ? "verified" : "notVerified"}`;
@@ -435,24 +445,52 @@ function addCart(cartNo) {
     return;
   }
 
+  // First add auto-opens window
+  if (round.carts.length === 0) {
+    openVerificationWindowIfNeeded();
+    showToast("Verification window opened.");
+  }
+
   round.carts.push(newCart(cleaned));
+  currentCartIndex = round.carts.length - 1;
+
   cartNumberInput.value = "";
-  cartNumberInput.placeholder = "e.g. CC-3E-014";
+  cartNumberInput.placeholder = "Enter cart ID (numbers)";
 
   saveTechToLocal();
   renderTechAll();
+
+  // Auto-scroll to newest sticker (batch-friendly)
+  requestAnimationFrame(() => {
+    const cards = cartList?.querySelectorAll(".cartCard");
+    const last = cards?.[cards.length - 1];
+    if (last) {
+      last.scrollIntoView({ behavior: "smooth", block: "start" });
+      const firstField = last.querySelector(".supplyName");
+      if (firstField) setTimeout(() => firstField.focus(), 250);
+    }
+  });
 
   showToast("Cart added ✔︎");
 }
 
 function removeCart(index) {
   round.carts.splice(index, 1);
+
+  if (round.carts.length === 0) {
+    currentCartIndex = -1;
+  } else if (currentCartIndex === index) {
+    currentCartIndex = round.carts.length - 1;
+  } else if (index < currentCartIndex) {
+    currentCartIndex = Math.max(0, currentCartIndex - 1);
+  }
+
   saveTechToLocal();
   renderTechAll();
 }
 
 /* ---------------------------
-   Shift + issue wiring (uses renderAfterEdit)
+   Shift + issue wiring
 --------------------------- */
 function wireShiftButtons(cart, cardEl) {
   const buttons = cardEl.querySelectorAll(".shiftBtn");
@@ -513,7 +551,7 @@ function syncIssueUI(cart, cardEl) {
 /* ---------------------------
    Cards
 --------------------------- */
-function cartCardHTML(cart, index) {
+function cartCardHTML(cart, index, isCurrent = false) {
   const status = computeVerificationPill(cart);
 
   const verifiedAtTime = cart.verifiedAt
@@ -523,7 +561,7 @@ function cartCardHTML(cart, index) {
   const statusLine = `${status.pill}${verifiedAtTime ? ` · ${verifiedAtTime}` : ""}`;
 
   return `
-    <div class="cartCard" data-index="${index}">
+    <div class="cartCard ${isCurrent ? "current" : ""}" data-index="${index}">
       <div class="cartHeader">
         <div>
           <div class="cartTitle">Cart # ${escapeHtml(cart.cartNo)}</div>
@@ -604,7 +642,9 @@ function cartCardHTML(cart, index) {
 }
 
 function renderCartCards() {
-  cartList.innerHTML = round.carts.map((c, i) => cartCardHTML(c, i)).join("");
+  cartList.innerHTML = round.carts
+    .map((c, i) => cartCardHTML(c, i, i === currentCartIndex))
+    .join("");
 
   cartList.querySelectorAll(".cartCard").forEach((cardEl) => {
     const idx = Number(cardEl.getAttribute("data-index"));
@@ -619,7 +659,6 @@ function renderCartCards() {
     const drugExp = cardEl.querySelector(".drugExp");
     const drugName = cardEl.querySelector(".drugName");
 
-    // ✅ KEYBOARD FIX: no full render on input
     supplyName.addEventListener("input", () => {
       cart.supplyName = supplyName.value;
       stampEdit(cart);
@@ -838,7 +877,7 @@ function downloadJSON(data, filename = "verifi_verification_record.json") {
 }
 
 /* ---------------------------
-   Main render (full render only when needed)
+   Main render
 --------------------------- */
 function renderTechAll() {
   renderWindowMeta();
@@ -880,14 +919,10 @@ cartNumberInput.addEventListener("keydown", (e) => {
 clearRoundBtn.addEventListener("click", () => {
   if (!confirm("Reset this verification? This clears all carts on this screen.")) return;
   round.carts = [];
+  currentCartIndex = -1;
   saveTechToLocal();
   renderTechAll();
-  showToast("Verification cleared.");
-});
-
-saveRoundBtn.addEventListener("click", () => {
-  saveTechToLocal();
-  showToast("Saved on this device.");
+  showToast("Cleared.");
 });
 
 exportJsonBtn.addEventListener("click", () => {
@@ -919,27 +954,27 @@ printPdfBtn.addEventListener("click", () => {
 });
 
 readyToggle.addEventListener("change", () => {
-  verificationWindowOpen = readyToggle.checked;
+  const open = readyToggle.checked;
 
-  if (verificationWindowOpen) {
+  if (open) {
     round.verificationWindowOpenedAt = new Date().toISOString();
     round.verificationWindowClosedAt = null;
     round.verificationEventType = inferVerificationEventType(round.verificationWindowOpenedAt);
-
     saveTechToLocal();
     renderTechAll();
-
     showToast("Verification window opened.");
-    // ✅ Autofocus the primary workflow input
     setTimeout(() => cartNumberInput?.focus(), 50);
   } else {
     round.verificationWindowClosedAt = new Date().toISOString();
-
     saveTechToLocal();
     renderTechAll();
-
     showToast("Verification window closed.");
   }
+});
+
+scanBtn?.addEventListener("click", () => {
+  showToast("Scan coming soon — enter Cart ID for now.");
+  cartNumberInput?.focus();
 });
 
 /* ===========================
@@ -1107,10 +1142,10 @@ function escapeHtml(str) {
   document.querySelector(`#cartTypeTabs .tab[data-type="${CSS.escape(round.cartType)}"]`)?.classList.add("active");
   departmentSelect.value = round.department;
 
-  // window state
-  verificationWindowOpen = !!round.verificationWindowOpenedAt && !round.verificationWindowClosedAt;
-  readyToggle.checked = verificationWindowOpen;
+  // current highlight (latest cart)
+  currentCartIndex = round.carts.length ? round.carts.length - 1 : -1;
 
+  // event type sanity
   if (round.verificationWindowOpenedAt && (!round.verificationEventType || round.verificationEventType === "Unspecified")) {
     round.verificationEventType = inferVerificationEventType(round.verificationWindowOpenedAt);
   }
