@@ -1,14 +1,24 @@
 :root{
-  --bg0:#0b0f12;
+  /* Backdrop + layout */
+  --bg0:#07090b;                 /* deepest black */
+  --panel:rgba(255,255,255,.045);
   --stroke:rgba(255,255,255,.10);
+
+  /* Text */
   --text:#eaf2f7;
   --muted:rgba(234,242,247,.65);
 
-  --accentBlueSoft: rgba(46,155,255,.18);
-  --successGreenSoft: rgba(43,182,115,.18);
+  /* Enterprise accents (subtle, not neon) */
+  --accentSoft: rgba(255,255,255,.08);
+  --accentEdge: rgba(255,255,255,.14);
 
-  --lime:#bfe4d3;   /* darker clinical mint */
-  --orange:#d6e9ff; /* clinical blue paper */
+  /* NEW: Sticker colors (lock these) */
+  --lime:#B9D62C;                /* SUPPLIES */
+  --orange:#F2A12B;              /* MEDS */
+
+  /* Soft status hues (used for toggles/badges only) */
+  --successGreenSoft: rgba(185,214,44,.18);  /* lime-based */
+  --infoSoft: rgba(255,255,255,.10);
 
   --verifiRed:#b00000;
 }
@@ -18,8 +28,9 @@ html,body{ height:100%; }
 body{
   margin:0;
   background:
-    radial-gradient(1200px 800px at 50% -200px, rgba(46,155,255,.18) 0%, rgba(11,15,18,1) 60%),
-    radial-gradient(900px 600px at 80% 10%, rgba(43,182,115,.10) 0%, rgba(11,15,18,0) 55%);
+    radial-gradient(900px 600px at 20% -10%, rgba(255,255,255,.06) 0%, rgba(0,0,0,0) 60%),
+    radial-gradient(700px 500px at 90% 10%, rgba(255,255,255,.04) 0%, rgba(0,0,0,0) 60%),
+    linear-gradient(180deg, var(--bg0) 0%, #0b0f12 70%, #0d1116 100%);
   color:var(--text);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
@@ -48,12 +59,12 @@ body{
 .pill--toggle input{ display:none; }
 .toggleTrack{
   width:42px; height:24px; border-radius:999px;
-  background: rgba(255,255,255,.14);
+  background: rgba(255,255,255,.12);
   position:relative; border:1px solid var(--stroke);
 }
 .toggleTrack::after{
   content:""; width:18px; height:18px; border-radius:999px;
-  background: rgba(255,255,255,.78);
+  background: rgba(255,255,255,.82);
   position:absolute; top:2px; left:2px;
   transition: all .18s ease;
 }
@@ -61,24 +72,44 @@ body{
 #showAllToggle:checked + .toggleTrack::after{ left:20px; }
 .toggleLabel{ color:var(--muted); font-weight:900; }
 
-/* GREEN GLOW when window open */
+/* LIME GLOW when window open (enterprise subtle) */
 #readyToggle:checked + .toggleTrack{
   background: var(--successGreenSoft);
-  border-color: rgba(43,182,115,.45);
-  box-shadow: 0 0 0 1px rgba(43,182,115,.35), 0 0 14px rgba(43,182,115,.35);
+  border-color: rgba(185,214,44,.55);
+  box-shadow: 0 0 0 1px rgba(185,214,44,.28), 0 0 14px rgba(185,214,44,.22);
 }
 #readyToggle:checked + .toggleTrack::after{ background: rgba(255,255,255,.95); }
 
 /* Segmented */
-.seg{ display:flex; border:1px solid var(--stroke); border-radius:14px; overflow:hidden; background: rgba(255,255,255,.04); }
-.segBtn{
-  padding:10px 12px; font-weight:1000; font-size:13px;
-  color: var(--muted); background: transparent; border:none; cursor:pointer;
+.seg{
+  display:flex;
+  border:1px solid var(--stroke);
+  border-radius:14px;
+  overflow:hidden;
+  background: rgba(255,255,255,.04);
 }
-.segBtn.active{ background: var(--accentBlueSoft); color: var(--text); }
+.segBtn{
+  padding:10px 12px;
+  font-weight:1000;
+  font-size:13px;
+  color: var(--muted);
+  background: transparent;
+  border:none;
+  cursor:pointer;
+}
+.segBtn.active{
+  background: rgba(255,255,255,.10);
+  color: var(--text);
+}
 
 /* PANELS */
-.panel{ background: rgba(15,27,32,.55); border:1px solid var(--stroke); border-radius:16px; padding:12px; margin-bottom:14px; }
+.panel{
+  background: var(--panel);
+  border:1px solid var(--stroke);
+  border-radius:16px;
+  padding:12px;
+  margin-bottom:14px;
+}
 .panelRow{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
 .panelTitle{ font-weight:1000; }
 .panelSub{ color:var(--muted); font-size:12px; text-align:right; }
@@ -98,10 +129,12 @@ body{
   font-size:12px;
   cursor:pointer;
 }
-.tab.active{ background: var(--accentBlueSoft); }
+.tab.active{ background: rgba(255,255,255,.10); }
 
 .select{
-  width:100%; border-radius:14px; padding:10px 12px;
+  width:100%;
+  border-radius:14px;
+  padding:10px 12px;
   border:1px solid var(--stroke);
   background: rgba(255,255,255,.04);
   color: var(--text);
@@ -110,7 +143,9 @@ body{
 
 .addCartRow{ display:flex; gap:10px; margin-top:12px; }
 .cartInput{
-  flex:1; padding:10px 12px; border-radius:14px;
+  flex:1;
+  padding:10px 12px;
+  border-radius:14px;
   border:1px solid var(--stroke);
   background: rgba(255,255,255,.04);
   color: var(--text);
@@ -123,24 +158,49 @@ body{
 
 /* IMPACT */
 .impactRow{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin: 6px 0 12px; }
-.impactCard{ border:1px solid var(--stroke); background: rgba(255,255,255,.04); border-radius:14px; padding:10px; text-align:center; }
+.impactCard{
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  border-radius:14px;
+  padding:10px;
+  text-align:center;
+}
 .impactLabel{ color: var(--muted); font-size:11px; font-weight:900; margin-bottom:6px; }
 .impactValue{ font-weight:1000; font-size:16px; }
 
 /* CARTS */
 .cartList{ display:flex; flex-direction:column; gap:14px; margin-bottom:14px; }
-.cartCard{ border:1px solid var(--stroke); border-radius:18px; padding:12px; background: rgba(0,0,0,.14); }
+.cartCard{
+  border:1px solid var(--stroke);
+  border-radius:18px;
+  padding:12px;
+  background: rgba(255,255,255,.02);
+}
 .cartCard.current{
-  border-color: rgba(46,155,255,.35);
-  box-shadow: 0 0 0 2px rgba(46,155,255,.14), 0 18px 40px rgba(0,0,0,.25);
+  border-color: rgba(255,255,255,.22);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.06), 0 18px 40px rgba(0,0,0,.25);
 }
 .cartHeader{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:10px; }
 .cartTitle{ font-weight:1000; font-size:16px; }
 .cartSub{ color: var(--muted); font-size:12px; margin-top:2px; }
-.iconBtn{ border:1px solid var(--stroke); background: rgba(255,255,255,.04); color: var(--text); border-radius:12px; padding:8px 10px; font-weight:900; cursor:pointer; }
+.iconBtn{
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius:12px;
+  padding:8px 10px;
+  font-weight:900;
+  cursor:pointer;
+}
 
-/* STICKERS */
-.sticker{ border-radius:18px; padding:16px 16px 14px; box-shadow: 0 18px 40px rgba(0,0,0,.30); border: 1px solid rgba(0,0,0,.10); margin-top:10px; }
+/* STICKERS (keep your existing class names) */
+.sticker{
+  border-radius:18px;
+  padding:16px 16px 14px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.38);
+  border: 1px solid rgba(0,0,0,.12);
+  margin-top:10px;
+}
 .sticker--lime{ background: var(--lime); color:#0a0b0c; }
 .sticker--orange{ background: var(--orange); color:#0a0b0c; }
 
@@ -154,13 +214,13 @@ body{
   padding:6px 10px; border-radius:999px;
   font-weight:1000; font-size:12px; letter-spacing:.6px;
   border:1px solid rgba(0,0,0,.22);
-  background: rgba(255,255,255,.65);
+  background: rgba(255,255,255,.70);
   color:#0a0b0c;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.expBadge.good{ border-color: rgba(43,182,115,.55); background: rgba(43,182,115,.18); }
-.expBadge.soon{ border-color: rgba(46,155,255,.55); background: rgba(46,155,255,.16); }
+.expBadge.good{ border-color: rgba(0,0,0,.20); background: rgba(255,255,255,.72); }
+.expBadge.soon{ border-color: rgba(0,0,0,.25); background: rgba(255,255,255,.62); }
 .expBadge.expired{ border-color: rgba(176,0,0,.65); background: rgba(176,0,0,.12); color: rgba(176,0,0,1); }
 
 .formRow{ display:grid; grid-template-columns: 1fr 1.2fr; gap:12px; align-items:end; margin-bottom:12px; }
@@ -230,7 +290,7 @@ body{
   font-size:13px;
   letter-spacing:1px;
   border:2px solid rgba(176,0,0,.65);
-  background: rgba(255,255,255,.70);
+  background: rgba(255,255,255,.74);
   color: var(--verifiRed);
   cursor:pointer;
 }
