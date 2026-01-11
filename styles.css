@@ -124,30 +124,29 @@ body{
 }
 
 /* ===============================
-   DEPARTMENT / AREA — EMPHASIZED
-   Bigger tap target + hospital icon
+   DEPARTMENT / AREA — iOS SAFE + BIGGER
    =============================== */
 #departmentSelect{
-  min-height: 56px;                 /* bigger hit area */
-  font-size: 15px;
-  font-weight: 1000;
-  padding: 14px 14px 14px 48px;     /* space for icon */
-  border-radius: 18px;
-  background-color: rgba(255,255,255,.06);
+  -webkit-appearance: none;
+  appearance: none;
 
-  background-image: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.65)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
-<rect x='3' y='3' width='18' height='18' rx='2' ry='2'/>\
-<path d='M12 7v10'/>\
-<path d='M7 12h10'/>\
-</svg>");
-  background-repeat: no-repeat;
-  background-position: 16px center;
-  background-size: 18px 18px;
+  min-height: 60px;
+  font-size: 16px;
+  font-weight: 1000;
+
+  padding: 16px 16px;
+  border-radius: 18px;
+
+  background: rgba(255,255,255,.08);
+  border: 1px solid var(--stroke);
+
+  /* IMPORTANT: ensure no leftover icon */
+  background-image: none !important;
 }
 #departmentSelect:focus{
-  border-color: rgba(255,255,255,.22);
-  background-color: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.25);
+  background: rgba(255,255,255,.10);
+  outline: none;
 }
 
 /* Add cart row */
