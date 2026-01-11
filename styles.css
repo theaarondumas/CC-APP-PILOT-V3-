@@ -1,3 +1,4 @@
+/* styles.css (DROP IN) */
 :root{
   --bg0:#0b0f12;
   --stroke:rgba(255,255,255,.10);
@@ -5,10 +6,6 @@
   --muted:rgba(234,242,247,.65);
   --lime:#c8d53a;
   --orange:#f4a21b;
-
-  --accent: rgba(86, 205, 255, .85);
-  --accentSoft: rgba(86, 205, 255, .20);
-  --warn: rgba(244,162,27,.55);
 }
 
 *{ box-sizing:border-box; }
@@ -42,11 +39,6 @@ body{
   line-height:1.05;
   text-align:center;
 }
-.h1Sub{
-  font-weight:900;
-  font-size: 14px;
-  opacity:.8;
-}
 .sub{
   text-align:center;
   color:var(--muted);
@@ -78,12 +70,6 @@ body{
   gap:8px;
 }
 .pill--outline{ background: transparent; }
-
-.pill--primary{
-  background: rgba(86, 205, 255, .18);
-  border-color: rgba(86, 205, 255, .32);
-}
-.pill--primary:hover{ filter: brightness(1.04); }
 
 .pill--toggle{
   position:relative;
@@ -169,47 +155,6 @@ body{
   .controlGrid{ grid-template-columns: 1.2fr .8fr; }
 }
 
-/* =========================
-   VERIFICATION WINDOW
-========================= */
-.windowPanel{
-  border-color: rgba(86, 205, 255, .24);
-  background: linear-gradient(180deg, rgba(86, 205, 255, .08), rgba(15,27,32,.55));
-}
-.windowPanel.open{
-  box-shadow: 0 0 0 2px rgba(86, 205, 255, .18), 0 18px 40px rgba(0,0,0,.35);
-}
-.windowHead{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:12px;
-}
-.windowTitle{
-  font-weight: 1000;
-  font-size: 14px;
-  letter-spacing: .2px;
-}
-.windowHelper{
-  color: var(--muted);
-  font-size: 12px;
-  margin-top: 3px;
-}
-.windowStatusRow{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  margin-top:10px;
-}
-.inlineStatus{
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-/* =========================
-   CHIPS / TABS
-========================= */
 .tabs{
   display:flex;
   gap:8px;
@@ -239,22 +184,11 @@ body{
   font-weight:900;
 }
 
-/* Add cart row */
 .addCartRow{
   display:flex;
   gap:10px;
   margin-top:12px;
-  align-items:center;
 }
-
-/* input wrap with scan icon */
-.cartInputWrap{
-  flex:1;
-  position:relative;
-  display:flex;
-  align-items:center;
-}
-
 .cartInput{
   flex:1;
   padding:10px 12px;
@@ -264,33 +198,6 @@ body{
   color: var(--text);
   font-weight:900;
   font-size:14px;
-}
-
-/* scan button inside input */
-.iconBtn{
-  border:1px solid var(--stroke);
-  background: rgba(255,255,255,.04);
-  color: var(--text);
-  border-radius:12px;
-  padding:8px 10px;
-  font-weight:900;
-  cursor:pointer;
-}
-.scanBtn{
-  position:absolute;
-  left:10px;
-  height:34px;
-  min-width:34px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:12px;
-  padding:0;
-  opacity:.95;
-}
-
-.cartInput--withIcon{
-  padding-left:54px;
 }
 
 .toolbarRow{
@@ -350,10 +257,9 @@ body{
   background: rgba(0,0,0,.14);
 }
 
-/* highlight newest/current cart */
 .cartCard.current{
-  border-color: rgba(86, 205, 255, .35);
-  box-shadow: 0 0 0 2px rgba(86, 205, 255, .14), 0 18px 40px rgba(0,0,0,.25);
+  border-color: rgba(255,255,255,.22);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.06), 0 18px 40px rgba(0,0,0,.25);
 }
 
 .cartHeader{
@@ -375,6 +281,15 @@ body{
 .cartActions{
   display:flex;
   gap:8px;
+}
+.iconBtn{
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius:12px;
+  padding:8px 10px;
+  font-weight:900;
+  cursor:pointer;
 }
 
 /* =========================
@@ -496,6 +411,24 @@ body{
   border-color: rgba(0,0,0,.35);
 }
 
+/* Sticker Save button (orange sticker footer) */
+.stickerFooter{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+.saveStickerBtn{
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 1000;
+  font-size: 13px;
+  border: 1px solid rgba(0,0,0,.25);
+  background: rgba(255,255,255,.55);
+  color: #0a0b0c;
+  cursor: pointer;
+}
+.saveStickerBtn:active{ transform: scale(.99); }
+
 /* =========================
    SUMMARY TABLE
 ========================= */
@@ -607,6 +540,7 @@ body{
   opacity: 0;
   pointer-events: none;
   transition: opacity .18s ease;
+  z-index: 9999;
 }
 .toast.show{ opacity: 1; }
 
@@ -620,7 +554,6 @@ body{
 
 @media print {
   body { background:#fff !important; color:#000 !important; }
-
   .topbar, .noPrint, .toast { display:none !important; }
 
   #nursingLogPrintArea { display:block !important; }
