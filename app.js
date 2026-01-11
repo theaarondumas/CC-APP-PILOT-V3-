@@ -1,7 +1,18 @@
+// Verifi — app.js (FULLY UNIFIED)
+// Includes:
+// - Tech name input (saved locally)
+// - AT RISK button
+// - Export JSON
+// - Export to Shared Folder (iOS share sheet)
+// - exportedBy/exportedAt on export
+// - enteredBy/enteredAt stamped per cart in export
+// NOTE: This preserves all prior functions/logic.
+
 const $ = (id) => document.getElementById(id);
 
 const LOCAL_KEY_TECH = "verifi_pilot_round_v1";
 const LOCAL_KEY_NURSE = "verifi_pilot_nurse_log_v1";
+const LOCAL_KEY_TECH_NAME = "verifi_pilot_tech_name_v1"; // NEW
 
 /* Toast */
 const toastEl = $("toast");
@@ -52,11 +63,13 @@ navNursing?.addEventListener("click", () => showScreen("nursing"));
 /* TECH refs */
 const cartTypeTabs = $("cartTypeTabs");
 const departmentSelect = $("departmentSelect");
+const techNameInput = $("techNameInput"); // NEW
 const cartNumberInput = $("cartNumberInput");
 const addCartBtn = $("addCartBtn");
-const atRiskBtn = $("atRiskBtn"); // NEW
+const atRiskBtn = $("atRiskBtn");
 const clearRoundBtn = $("clearRoundBtn");
 const exportJsonBtn = $("exportJsonBtn");
+const exportShareBtn = $("exportShareBtn");
 const readyToggle = $("readyToggle");
 const windowMeta = $("windowMeta");
 const roundMeta = $("roundMeta");
@@ -75,6 +88,32 @@ const sortRiskBtn = $("sortRiskBtn");
 const metricGaps = $("metricGaps");
 const metricPaper = $("metricPaper");
 const metricMoney = $("metricMoney");
+
+/* Tech name state */
+let techName = "";
+
+/* Tech name helpers */
+function loadTechName() {
+  try { techName = localStorage.getItem(LOCAL_KEY_TECH_NAME) || ""; }
+  catch { techName = ""; }
+  if (techNameInput) techNameInput.value = techName;
+}
+function saveTechName(val) {
+  techName = String(val || "").trim();
+  try { localStorage.setItem(LOCAL_KEY_TECH_NAME, techName); } catch {}
+}
+function safeSlug(s) {
+  return String(s || "")
+    .trim()
+    .replaceAll("—", "-")
+    .replaceAll("–", "-")
+    .replaceAll(" ", "-")
+    .replace(/[^a-zA-Z0-9-_]/g, "");
+}
+function getTechNameForExport() {
+  const v = String(techNameInput?.value || techName || "").trim();
+  return v || "UnknownTech";
+}
 
 let showAll = false;
 let currentCartIndex = -1;
@@ -660,6 +699,7 @@ function loadTechFromLocal() {
     return true;
   } catch { return false; }
 }
+
 function downloadJSON(data, filename) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
   const url = URL.createObjectURL(blob);
@@ -669,6 +709,62 @@ function downloadJSON(data, filename) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+/* Share JSON (iOS Share Sheet → save to OneDrive/SharePoint folder) */
+async function shareJSONFile(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const file = new File([blob], filename, { type: "application/json" });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    await navigator.share({
+      title: "Verifi Verification Record",
+      text: "Save this JSON to the shared OneDrive/SharePoint folder.",
+      files: [file]
+    });
+    return true;
+  }
+
+  // Fallback
+  downloadJSON(data, filename);
+  showToast("Share not available — downloaded JSON.");
+  return false;
+}
+
+/* Export record builder (adds exportedBy/exportedAt and cart stamps) */
+function buildExportRecordForRound() {
+  const all = round.carts;
+  const verified = all.filter(isCartVerified);
+
+  const exportedBy = getTechNameForExport();
+  const exportedAt = new Date().toISOString();
+
+  const cartsStamped = all.map(c => ({
+    ...c,
+    enteredBy: exportedBy,
+    enteredAt: c.lastEditedAt || c.verifiedAt || exportedAt
+  }));
+
+  return {
+    ...round,
+    exportedBy,
+    exportedAt,
+    carts: cartsStamped,
+    impact: {
+      scope:"GLOBAL",
+      gapsSurfaced: all.filter(c => computeVerificationPill(c).level !== "verified").length,
+      paperAvoidedPages: verified.reduce((sum,c)=>sum+pagesPerVerificationForCart(c),0),
+      assumptions:{ ...IMPACT }
+    }
+  };
+}
+
+function buildExportFilename() {
+  const yyyy_mm_dd = new Date().toISOString().slice(0,10);
+  const tech = safeSlug(getTechNameForExport());
+  const type = safeSlug(round.cartType || "CartType");
+  const dept = safeSlug(round.department || "Unassigned");
+  return `verifi_${yyyy_mm_dd}_${tech}_${type}_${dept}.json`;
 }
 
 /* Main render */
@@ -699,10 +795,14 @@ departmentSelect?.addEventListener("change", ()=>{
   renderTechAll();
 });
 
+techNameInput?.addEventListener("input", ()=>{
+  saveTechName(techNameInput.value);
+});
+
 addCartBtn?.addEventListener("click", ()=> addCart(cartNumberInput.value));
 cartNumberInput?.addEventListener("keydown", (e)=>{ if (e.key==="Enter") addCart(cartNumberInput.value); });
 
-/* NEW: AT RISK button behavior (does not change your model) */
+/* AT RISK button behavior */
 atRiskBtn?.addEventListener("click", ()=>{
   cartSortMode = "risk";
   sortRiskBtn?.classList.add("active");
@@ -722,19 +822,22 @@ clearRoundBtn?.addEventListener("click", ()=>{
 
 exportJsonBtn?.addEventListener("click", ()=>{
   if (!requireClosedWindowOrConfirm("export")) return;
-  const all = round.carts;
-  const verified = all.filter(isCartVerified);
-  const exportRecord = {
-    ...round,
-    impact: {
-      scope:"GLOBAL",
-      gapsSurfaced: all.filter(c => computeVerificationPill(c).level !== "verified").length,
-      paperAvoidedPages: verified.reduce((sum,c)=>sum+pagesPerVerificationForCart(c),0),
-      assumptions:{ ...IMPACT }
-    }
-  };
-  downloadJSON(exportRecord, "verifi_GLOBAL_verification_record.json");
+  const exportRecord = buildExportRecordForRound();
+  const filename = buildExportFilename();
+  downloadJSON(exportRecord, filename);
   showToast("Exported JSON.");
+});
+
+exportShareBtn?.addEventListener("click", async ()=>{
+  if (!requireClosedWindowOrConfirm("export/share")) return;
+  const exportRecord = buildExportRecordForRound();
+  const filename = buildExportFilename();
+  try {
+    await shareJSONFile(exportRecord, filename);
+    showToast("Choose OneDrive/SharePoint folder.");
+  } catch {
+    showToast("Share canceled.");
+  }
 });
 
 showAllToggle?.addEventListener("change", ()=>{
@@ -894,6 +997,9 @@ function escapeHtml(str){
 (function init(){
   loadTechFromLocal();
   renderDepartmentOptions();
+
+  // NEW: load tech name
+  loadTechName();
 
   if (!round.department) round.department = (DEPARTMENTS[round.cartType] || [])[0] || "";
   departmentSelect.value = round.department;
