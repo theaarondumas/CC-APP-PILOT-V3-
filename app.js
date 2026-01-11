@@ -1,7 +1,7 @@
-/* ===========================
-   Verifi — Crash Cart Verification (PRODUCTION)
-   + Security: require "Close verification window" confirmation before export/print
-   =========================== */
+/* app.js (DROP IN)
+   PRODUCTION + Save button on sticker + Scroll back to Verification Setup
+   + Security: require close verification window before export/print
+*/
 
 const $ = (id) => document.getElementById(id);
 
@@ -9,7 +9,7 @@ const LOCAL_KEY_TECH = "verifi_pilot_round_v1";
 const LOCAL_KEY_NURSE = "verifi_pilot_nurse_log_v1";
 
 /* ---------------------------
-   Toast (production: only important messages)
+   Toast
 --------------------------- */
 const toastEl = $("toast");
 let toastTimer = null;
@@ -88,6 +88,8 @@ const nursingLogContainer = $("nursingLogContainer");
 const nursingLogPrintContainer = $("nursingLogPrintContainer");
 const showAllToggle = $("showAllToggle");
 const printPdfBtn = $("printPdfBtn");
+
+const verificationSetup = $("verificationSetup");
 
 // Impact metrics
 const metricGaps = $("metricGaps");
@@ -198,18 +200,16 @@ function isWindowOpen() {
 }
 
 /* ---------------------------
-   SECURITY GATE: must close window before submit/export/print
+   SECURITY GATE: must close window before export/print
 --------------------------- */
 function requireClosedWindowOrConfirm(actionLabel = "submit") {
   if (!isWindowOpen()) return true;
 
   const ok = confirm(
-    `Verification Window is still OPEN.\n\nFor security and audit integrity, please CLOSE the Verification Window before you ${actionLabel}.\n\nClose it now?`
+    `Verification Window is still OPEN.\n\nFor audit integrity, please CLOSE the Verification Window before you ${actionLabel}.\n\nClose it now?`
   );
-
   if (!ok) return false;
 
-  // Close the window now
   round.verificationWindowClosedAt = new Date().toISOString();
   if (readyToggle) readyToggle.checked = false;
 
@@ -464,6 +464,7 @@ function addCart(cartNo) {
   saveTechToLocal();
   renderTechAll();
 
+  // Auto-scroll to newest sticker/card
   setTimeout(() => {
     const cards = cartList?.querySelectorAll(".cartCard");
     const last = cards?.[cards.length - 1];
@@ -547,7 +548,7 @@ function syncIssueUI(cart, cardEl) {
 }
 
 /* ---------------------------
-   Cards
+   Cards (includes Save button on ORANGE sticker)
 --------------------------- */
 function cartCardHTML(cart, index, isCurrent = false) {
   const status = computeVerificationPill(cart);
@@ -634,6 +635,10 @@ function cartCardHTML(cart, index, isCurrent = false) {
             autocomplete="off" autocapitalize="words" spellcheck="false"
             value="${escapeHtml(cart.drugName)}" />
         </div>
+
+        <div class="stickerFooter">
+          <button type="button" class="saveStickerBtn">Save</button>
+        </div>
       </section>
     </div>
   `;
@@ -657,6 +662,7 @@ function renderCartCards() {
     const drugExp = cardEl.querySelector(".drugExp");
     const drugName = cardEl.querySelector(".drugName");
 
+    // No full render on input (keeps iOS keyboard open)
     supplyName.addEventListener("input", () => {
       cart.supplyName = supplyName.value;
       stampEdit(cart);
@@ -695,6 +701,21 @@ function renderCartCards() {
 
     wireShiftButtons(cart, cardEl);
     syncIssueUI(cart, cardEl);
+
+    // ✅ Save button on the sticker: save + scroll back to Verification Setup
+    const saveStickerBtn = cardEl.querySelector(".saveStickerBtn");
+    saveStickerBtn?.addEventListener("click", () => {
+      stampEdit(cart);
+      saveTechToLocal();
+      showToast("Saved ✓");
+
+      // Scroll back up to setup and focus Cart ID input
+      const target = verificationSetup || cartTypeTabs?.closest(".panel") || cartTypeTabs;
+      setTimeout(() => {
+        scrollToEl(target);
+        setTimeout(() => cartNumberInput?.focus(), 200);
+      }, 60);
+    });
   });
 }
 
