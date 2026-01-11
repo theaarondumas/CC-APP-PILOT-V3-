@@ -1,4 +1,3 @@
-<!-- index.html (DROP IN) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -17,7 +16,9 @@
     <header class="topbar">
       <div class="topbar__title">
         <div class="h1">Verification Required<br/>Crash Carts</div>
-        <div class="sub">Role-based verification • Tech + Nursing (separate screens)</div>
+        <div class="sub">
+          Role-based verification • Tech + Nursing (separate screens)
+        </div>
         <div class="sub" id="windowMeta"></div>
       </div>
 
@@ -51,10 +52,10 @@
           <div>
             <div class="fieldLabel">Verification category</div>
             <div class="tabs" id="cartTypeTabs">
-              <button class="tab active" data-type="Adult – Towers" type="button">Adult – Towers</button>
-              <button class="tab" data-type="Adult – ER / Procedural" type="button">Adult – ER / Procedural</button>
-              <button class="tab" data-type="Neonatal" type="button">Neonatal</button>
-              <button class="tab" data-type="Broselow" type="button">Broselow</button>
+              <button class="tab active" data-type="Adult – Towers">Adult – Towers</button>
+              <button class="tab" data-type="Adult – ER / Procedural">Adult – ER / Procedural</button>
+              <button class="tab" data-type="Neonatal">Neonatal</button>
+              <button class="tab" data-type="Broselow">Broselow</button>
             </div>
           </div>
 
@@ -68,21 +69,22 @@
           <input
             id="cartNumberInput"
             class="cartInput"
-            type="tel"
+            placeholder="Enter cart ID"
             inputmode="numeric"
             pattern="[0-9]*"
-            placeholder="Enter cart ID (numbers)"
-            autocomplete="off"
-            autocorrect="off"
-            autocapitalize="off"
-            spellcheck="false"
           />
-          <button id="addCartBtn" class="pill pill--outline" type="button">Add to Verification</button>
+          <button id="addCartBtn" class="pill pill--outline" type="button">
+            Add to Verification
+          </button>
         </div>
 
         <div class="toolbarRow noPrint">
-          <button id="clearRoundBtn" class="pill pill--outline" type="button">Clear Verification</button>
-          <button id="exportJsonBtn" class="pill pill--outline" type="button">Export Verification Record (JSON)</button>
+          <button id="clearRoundBtn" class="pill pill--outline" type="button">
+            Clear Verification
+          </button>
+          <button id="exportJsonBtn" class="pill pill--outline" type="button">
+            Export Verification Record (JSON)
+          </button>
         </div>
 
         <div class="miniHint">
@@ -91,17 +93,20 @@
         </div>
       </section>
 
-      <!-- Cart Cards -->
+      <!-- Cart Stickers -->
       <section id="cartList" class="cartList"></section>
 
-      <!-- Summary -->
+      <!-- =========================
+           VERIFICATION SUMMARY
+      ========================== -->
       <section class="panel">
         <div class="panelRow" style="margin-bottom:10px;">
           <div class="panelTitle">Verification Summary</div>
           <div class="panelSub" id="nursingMeta">Exceptions only</div>
         </div>
 
-        <div class="impactRow" id="impactRow">
+        <!-- Impact Metrics -->
+        <div class="impactRow">
           <div class="impactCard">
             <div class="impactLabel">Gaps surfaced (global)</div>
             <div class="impactValue" id="metricGaps">0</div>
@@ -116,8 +121,10 @@
           </div>
         </div>
 
+        <!-- Controls -->
         <div class="nurseControls noPrint">
-          <div class="nurseRow" style="gap:10px; flex-wrap:wrap;">
+          <div class="nurseRow">
+
             <label class="pill pill--toggle" style="gap:8px;">
               <input id="showAllToggle" type="checkbox" />
               <span class="toggleTrack"></span>
@@ -126,11 +133,17 @@
 
             <!-- Sort toggle -->
             <div class="seg" aria-label="Sort carts">
-              <button id="sortEntryBtn" class="segBtn active" type="button">By entry</button>
-              <button id="sortRiskBtn" class="segBtn" type="button">By risk</button>
+              <button id="sortEntryBtn" class="segBtn active" type="button">
+                By entry
+              </button>
+              <button id="sortRiskBtn" class="segBtn" type="button">
+                By risk
+              </button>
             </div>
 
-            <button id="printPdfBtn" class="pill pill--outline" type="button">Export Verification Record (PDF)</button>
+            <button id="printPdfBtn" class="pill pill--outline" type="button">
+              Export Verification Record (PDF)
+            </button>
           </div>
         </div>
 
@@ -138,10 +151,15 @@
 
         <!-- PRINT AREA -->
         <section id="nursingLogPrintArea">
-          <div style="margin: 0 0 10px 0;">
-            <div style="font-weight:900; font-size:16px;">Verifi — Verification Summary</div>
+          <div style="margin-bottom:10px;">
+            <div style="font-weight:900;font-size:16px;">
+              Verifi — Verification Summary
+            </div>
             <div style="font-size:12px;">
-              Category: <span id="printCartType"></span> • Generated: <span id="printGeneratedAt"></span>
+              Category:
+              <span id="printCartType"></span>
+              • Generated:
+              <span id="printGeneratedAt"></span>
             </div>
           </div>
           <div id="nursingLogPrintContainer"></div>
@@ -151,7 +169,7 @@
     </div>
 
     <!-- =========================
-         NURSING VIEW (Paper-style)
+         NURSING VIEW
     ========================== -->
     <div id="nursingView" class="hidden">
 
@@ -163,8 +181,8 @@
 
         <div class="controlGrid" style="margin-top:10px;">
           <div>
-            <div class="fieldLabel">Unit / Area (label)</div>
-            <input id="nurseUnitName" class="cartInput" placeholder="e.g., 4th Floor Tower / ER Area" />
+            <div class="fieldLabel">Unit / Area</div>
+            <input id="nurseUnitName" class="cartInput" placeholder="e.g., 4th Floor Tower" />
           </div>
 
           <div>
@@ -174,14 +192,23 @@
         </div>
 
         <div class="toolbarRow noPrint">
-          <button id="nurseAddRowBtn" class="pill pill--outline" type="button">Add Today’s Row</button>
-          <button id="nurseSaveBtn" class="pill pill--outline" type="button">Save</button>
-          <button id="nursePrintBtn" class="pill pill--outline" type="button">Print / Save PDF</button>
-          <button id="nurseClearBtn" class="pill pill--outline" type="button">Clear Month</button>
+          <button id="nurseAddRowBtn" class="pill pill--outline" type="button">
+            Add Today’s Row
+          </button>
+          <button id="nurseSaveBtn" class="pill pill--outline" type="button">
+            Save
+          </button>
+          <button id="nursePrintBtn" class="pill pill--outline" type="button">
+            Print / Save PDF
+          </button>
+          <button id="nurseClearBtn" class="pill pill--outline" type="button">
+            Clear Month
+          </button>
         </div>
 
         <div class="miniHint">
-          Nurses: mirrors your paper crash cart log (one row per day). Techs do NOT fill this out.
+          Nurses: mirrors your paper crash cart log (one row per day).
+          Techs do NOT fill this out.
         </div>
       </section>
 
@@ -189,10 +216,15 @@
         <div id="nurseTableWrap"></div>
 
         <section id="nursePrintArea">
-          <div style="margin: 0 0 10px 0;">
-            <div style="font-weight:900; font-size:16px;">Verifi — Nursing Crash Cart Log</div>
+          <div style="margin-bottom:10px;">
+            <div style="font-weight:900;font-size:16px;">
+              Verifi — Nursing Crash Cart Log
+            </div>
             <div style="font-size:12px;">
-              Unit: <span id="nursePrintUnit"></span> • Month: <span id="nursePrintMonth"></span>
+              Unit:
+              <span id="nursePrintUnit"></span>
+              • Month:
+              <span id="nursePrintMonth"></span>
             </div>
           </div>
           <div id="nursePrintTableWrap"></div>
@@ -204,9 +236,9 @@
   </div>
 
   <!-- Toast -->
-  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="toast" class="toast"></div>
 
-  <!-- Cache-bust: bump v= if Safari caches -->
-  <script src="app.js?v=99"></script>
+  <!-- SCRIPT (BUMP VERSION TO CLEAR SAFARI CACHE) -->
+  <script src="app.js?v=100"></script>
 </body>
 </html>
