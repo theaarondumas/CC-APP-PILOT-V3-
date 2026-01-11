@@ -1,18 +1,20 @@
+/* styles.css (DROP IN) — Option A (Green/White/Blue) + Verification Window green glow
+   + FIX: Sticker inputs back to underline “handwritten” style (no iOS rounded boxes)
+*/
+
 :root{
-  /* Core palette (pilot-safe) */
   --bg0:#0b0f12;
   --stroke:rgba(255,255,255,.10);
   --text:#eaf2f7;
   --muted:rgba(234,242,247,.65);
 
-  /* Clinical accents */
   --accentBlue: rgba(46, 155, 255, 0.85);
   --accentBlueSoft: rgba(46, 155, 255, 0.18);
 
   --successGreen: rgba(43, 182, 115, 0.92);
   --successGreenSoft: rgba(43, 182, 115, 0.18);
 
-  /* Sticker papers (UPDATED mint green) */
+  /* Sticker papers */
   --lime:#bfe4d3;     /* slightly darker clinical mint */
   --orange:#d6e9ff;   /* clinical blue paper */
 
@@ -114,7 +116,7 @@ body{
 
 .toggleLabel{ color:var(--muted); font-weight:900; }
 
-/* Verification window ACTIVE glow */
+/* Verification Window ACTIVE glow (GREEN) */
 #readyToggle:checked + .toggleTrack{
   background: var(--successGreenSoft);
   border-color: rgba(43,182,115,.45);
@@ -126,13 +128,13 @@ body{
   background: rgba(255,255,255,.95);
 }
 
-/* Show-all toggle (blue) */
+/* Show-all toggle (BLUE) */
 #showAllToggle:checked + .toggleTrack{
   background: rgba(46,155,255,.14);
   border-color: rgba(46,155,255,.24);
 }
 
-/* Segmented nav */
+/* Segmented nav (Tech / Nursing) */
 .seg{
   display:flex;
   border:1px solid var(--stroke);
@@ -156,7 +158,7 @@ body{
 }
 
 /* =========================
-   PANELS
+   PANELS / LAYOUT
 ========================= */
 .panel{
   background: rgba(15,27,32,.55);
@@ -165,24 +167,173 @@ body{
   padding:12px;
   margin-bottom:14px;
 }
+.panelRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:10px;
+}
+.panelTitle{ font-weight:1000; }
+.panelSub{ color:var(--muted); font-size:12px; text-align:right; }
+
+.fieldLabel{
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.controlGrid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:12px;
+  margin-top:10px;
+}
+@media (min-width:520px){
+  .controlGrid{ grid-template-columns: 1.2fr .8fr; }
+}
+
+/* Tabs */
+.tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.tab{
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius:999px;
+  padding:8px 10px;
+  font-weight:900;
+  font-size:12px;
+  cursor:pointer;
+}
+.tab.active{
+  background: var(--accentBlueSoft);
+  border-color: rgba(46,155,255,.28);
+  box-shadow: inset 0 0 0 1px rgba(46,155,255,.18);
+}
+
+.select{
+  width:100%;
+  border-radius:14px;
+  padding:10px 12px;
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  font-weight:900;
+}
+
+.addCartRow{
+  display:flex;
+  gap:10px;
+  margin-top:12px;
+}
+.cartInput{
+  flex:1;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  font-weight:900;
+  font-size:14px;
+}
+
+.toolbarRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.miniHint{
+  margin-top:8px;
+  color:var(--muted);
+  font-size:12px;
+}
 
 /* =========================
-   CARTS / STICKERS
+   IMPACT STRIP
 ========================= */
+.impactRow{
+  display:grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap:10px;
+  margin: 6px 0 12px;
+}
+.impactCard{
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  border-radius:14px;
+  padding:10px;
+  text-align:center;
+}
+.impactLabel{
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+.impactValue{
+  font-weight: 1000;
+  font-size: 16px;
+}
+
+/* =========================
+   CART LIST / CARDS
+========================= */
+.cartList{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin-bottom:14px;
+}
+
 .cartCard{
   border:1px solid var(--stroke);
   border-radius:18px;
   padding:12px;
   background: rgba(0,0,0,.14);
 }
+
+/* current cart highlight = BLUE */
 .cartCard.current{
   border-color: rgba(46,155,255,.35);
   box-shadow: 0 0 0 2px rgba(46,155,255,.14), 0 18px 40px rgba(0,0,0,.25);
 }
 
+.cartHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+  gap:10px;
+}
+.cartTitle{ font-weight:1000; font-size:16px; }
+.cartSub{
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+.cartActions{ display:flex; gap:8px; }
+.iconBtn{
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius:12px;
+  padding:8px 10px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+/* =========================
+   STICKERS (green + blue paper)
+========================= */
 .sticker{
   border-radius:18px;
-  padding:16px;
+  padding:16px 16px 14px;
   box-shadow: 0 18px 40px rgba(0,0,0,.30);
   border: 1px solid rgba(0,0,0,.10);
   margin-top:10px;
@@ -190,9 +341,131 @@ body{
 .sticker--lime{ background: var(--lime); color:#0a0b0c; }
 .sticker--orange{ background: var(--orange); color:#0a0b0c; }
 
-/* =========================
-   VERIFI BUTTON
-========================= */
+.sticker__title{
+  text-align:center;
+  font-weight:1000;
+  font-size:30px;
+  letter-spacing:1px;
+  margin:4px 0 10px;
+}
+.sticker__titleSmall{
+  text-align:center;
+  font-weight:1000;
+  font-size:26px;
+  margin:4px 0 10px;
+}
+.sticker__rule{
+  height:2px;
+  background: rgba(0,0,0,.20);
+  border-radius:2px;
+  margin: 8px 0 14px;
+}
+
+/* ✅ FIX: Force “handwritten underline” inputs inside stickers (no iOS rounded boxes) */
+.sticker input[type="text"],
+.sticker input[type="date"]{
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+
+  border-bottom: 3px solid rgba(0,0,0,.32) !important;
+  padding: 6px 2px 6px !important;
+  font-size:16px !important;
+  font-weight:900 !important;
+  text-align: right !important;
+
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+.sticker input::placeholder{
+  color: rgba(0,0,0,.38) !important;
+  font-weight:900 !important;
+}
+
+/* Slightly stronger underline for checkedBy */
+.sticker .checkedBy{
+  border-bottom-color: rgba(0,0,0,.45) !important;
+}
+
+.formRow{
+  display:grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap:12px;
+  align-items:end;
+  margin-bottom:12px;
+}
+.label{
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-style: italic;
+  font-weight:900;
+  font-size:18px;
+}
+
+/* Shift pills */
+.shiftRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:8px;
+}
+.shiftLabel{
+  font-weight:900;
+  font-size:13px;
+  opacity:.8;
+}
+.shiftPills{ display:flex; gap:6px; }
+.shiftBtn{
+  border:1px solid rgba(0,0,0,.18);
+  background: rgba(255,255,255,.55);
+  color: #0a0b0c;
+  border-radius:999px;
+  padding:4px 10px;
+  font-size:12px;
+  font-weight:1000;
+  cursor:pointer;
+}
+.shiftBtn.active{
+  background: rgba(255,255,255,.85);
+  border-color: rgba(0,0,0,.25);
+}
+
+/* Issue */
+.issueRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-top:6px;
+}
+.issueToggle{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:1000;
+}
+.issueToggle input{ transform: scale(1.2); }
+.issueHint{ font-weight:900; opacity:.75; font-size:12px; }
+
+.issueNoteRow{ margin-top:10px; }
+.issueNoteInput{
+  width:100%;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,.18);
+  padding:10px 12px;
+  font-weight:900;
+  background: rgba(255,255,255,.55);
+  outline:none;
+}
+
+/* Sticker footer + VERIFI button */
+.stickerFooter{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:10px;
+}
 .saveStickerBtn{
   border-radius:999px;
   padding:10px 16px;
@@ -210,10 +483,150 @@ body{
 }
 
 /* =========================
+   SUMMARY TABLE
+========================= */
+.nurseControls{ display:flex; flex-direction:column; gap:10px; }
+.nurseRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.nurseTable{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  overflow:hidden;
+  border-radius:14px;
+  border:1px solid var(--stroke);
+}
+.nurseTable th, .nurseTable td{
+  text-align:left;
+  padding:10px 10px;
+  font-size:12px;
+}
+.nurseTable th{
+  background: rgba(255,255,255,.06);
+  color:var(--muted);
+  font-weight:1000;
+}
+.nurseTable tr:nth-child(even) td{
+  background: rgba(255,255,255,.03);
+}
+.groupHeader{
+  margin:14px 0 6px;
+  font-weight:1000;
+  color: var(--text);
+}
+
+.statusPill{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:1000;
+  font-size:12px;
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+}
+.statusPill.verified{
+  border-color: rgba(43,182,115,.35);
+  background: rgba(43,182,115,.14);
+}
+.statusPill.pending{
+  border-color: rgba(46,155,255,.35);
+  background: rgba(46,155,255,.12);
+}
+.statusPill.notVerified{
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.04);
+}
+.statusPill.review{
+  border-color: rgba(176,0,0,.30);
+  background: rgba(176,0,0,.10);
+}
+
+/* =========================
+   NURSING PAPER TABLE
+========================= */
+.paperTable{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  overflow:hidden;
+  border-radius:14px;
+  border:1px solid var(--stroke);
+}
+.paperTable th, .paperTable td{
+  text-align:center;
+  padding:8px 6px;
+  font-size:12px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.paperTable th{
+  background: rgba(255,255,255,.06);
+  color: var(--muted);
+  font-weight:1000;
+}
+.paperTable td:first-child, .paperTable th:first-child{
+  text-align:left;
+  padding-left:10px;
+}
+.paperChk{ transform: scale(1.2); }
+.paperInput{
+  width:100%;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  padding:6px 8px;
+  font-weight:900;
+  outline:none;
+  font-size:12px;
+}
+
+/* =========================
+   TOAST
+========================= */
+.toast{
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  background: rgba(10, 14, 18, .92);
+  border: 1px solid rgba(255,255,255,.14);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 900;
+  font-size: 12px;
+  max-width: 92vw;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+  z-index: 9999;
+}
+.toast.show{ opacity: 1; }
+
+/* =========================
    GLOBAL
 ========================= */
 .hidden{ display:none; }
+#nursingLogPrintArea{ display:none; }
+#nursePrintArea{ display:none; }
 
 @media print {
   body { background:#fff !important; color:#000 !important; }
+  .topbar, .noPrint, .toast { display:none !important; }
+
+  #nursingLogPrintArea { display:block !important; }
+  #nursePrintArea { display:block !important; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11pt; }
+  th, td { border: 1px solid #000; padding: 6px 8px; }
+  th { background: #f2f2f2; font-weight: 800; }
+  .groupHeader { page-break-after: avoid; font-weight: 900; margin: 12px 0 6px; }
+  tr { page-break-inside: avoid; }
+  .statusPill { border: 1px solid #000; background: transparent !important; color:#000 !important; }
 }
