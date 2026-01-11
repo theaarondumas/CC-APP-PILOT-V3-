@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Verifi — Crash Cart Verification</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+
+    <header class="topbar">
+      <div class="topbar__title">
+        <div class="h1">Crash Cart Verification<br/><span class="h1Sub">(Post-Use)</span></div>
+        <div class="sub">Role-based verification • Tech + Nursing (separate screens)</div>
+        <div class="sub" id="windowMeta"></div>
+      </div>
+
+      <div class="topbar__actions noPrint">
+        <div class="seg">
+          <button id="navTech" class="segBtn active" type="button">Tech</button>
+          <button id="navNursing" class="segBtn" type="button">Nursing</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- =========================
+         TECH VIEW
+    ========================== -->
+    <div id="techView">
+
+      <!-- ✅ Mission-critical Verification Window -->
+      <section class="panel windowPanel" id="windowPanel">
+        <div class="windowHead">
+          <div>
+            <div class="windowTitle">Verification Window</div>
+            <div class="windowHelper">Active verification required for compliance documentation.</div>
+          </div>
+
+          <label class="pill pill--toggle windowToggle">
+            <input id="readyToggle" type="checkbox" />
+            <span class="toggleTrack"></span>
+            <span class="toggleLabel">Open</span>
+          </label>
+        </div>
+
+        <div class="windowStatusRow">
+          <span id="windowStatusPill" class="statusPill notVerified">Closed</span>
+          <span id="inlineStatus" class="inlineStatus" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <!-- Verification Controls -->
+      <section class="panel">
+        <div class="panelRow">
+          <div class="panelTitle">Verification Setup (Tech)</div>
+          <div class="panelSub" id="roundMeta">No active verifications</div>
+        </div>
+
+        <div class="controlGrid">
+          <div>
+            <div class="fieldLabel">Verification category</div>
+            <div class="tabs" id="cartTypeTabs">
+              <button class="tab active" data-type="Adult – Towers" type="button">Adult – Towers</button>
+              <button class="tab" data-type="Adult – ER / Procedural" type="button">Adult – ER / Procedural</button>
+              <button class="tab" data-type="Neonatal" type="button">Neonatal</button>
+              <button class="tab" data-type="Broselow" type="button">Broselow</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="fieldLabel">Department / Area</div>
+            <select id="departmentSelect" class="select"></select>
+          </div>
+        </div>
+
+        <div class="addCartRow">
+          <input
+            id="cartNumberInput"
+            class="cartInput"
+            placeholder="e.g. CC-3E-014"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+          />
+          <button id="addCartBtn" class="pill pill--primary" type="button">Add to Verification</button>
+        </div>
+
+        <div class="toolbarRow noPrint">
+          <button id="clearRoundBtn" class="pill pill--outline" type="button">Clear</button>
+          <button id="saveRoundBtn" class="pill pill--outline" type="button">Save Verification</button>
+          <button id="exportJsonBtn" class="pill pill--outline" type="button">Export Record (JSON)</button>
+        </div>
+
+        <div class="miniHint">
+          Verify carts as you walk. Exceptions surface automatically. <strong>If it isn’t verified, it doesn’t protect.</strong>
+        </div>
+      </section>
+
+      <!-- Cart Cards -->
+      <section id="cartList" class="cartList"></section>
+
+      <!-- Verification summary -->
+      <section class="panel">
+        <div class="panelRow" style="margin-bottom:10px;">
+          <div class="panelTitle">Verification Summary</div>
+          <div class="panelSub" id="nursingMeta">Exceptions only</div>
+        </div>
+
+        <!-- Impact strip (GLOBAL) -->
+        <div class="impactRow" id="impactRow">
+          <div class="impactCard">
+            <div class="impactLabel">Gaps surfaced (global)</div>
+            <div class="impactValue" id="metricGaps">0</div>
+          </div>
+          <div class="impactCard">
+            <div class="impactLabel">Paper avoided (global)</div>
+            <div class="impactValue" id="metricPaper">0</div>
+          </div>
+          <div class="impactCard">
+            <div class="impactLabel">Estimated $ saved (global)</div>
+            <div class="impactValue" id="metricMoney">$0</div>
+          </div>
+        </div>
+
+        <div class="nurseControls noPrint">
+          <div class="nurseRow">
+            <label class="pill pill--toggle" style="gap:8px;">
+              <input id="showAllToggle" type="checkbox" />
+              <span class="toggleTrack"></span>
+              <span class="toggleLabel">Show all verifications</span>
+            </label>
+
+            <button id="printPdfBtn" class="pill pill--outline" type="button">Export Record (PDF)</button>
+          </div>
+        </div>
+
+        <div id="nursingLogContainer"></div>
+
+        <!-- PRINT AREA -->
+        <section id="nursingLogPrintArea">
+          <div style="margin: 0 0 10px 0;">
+            <div style="font-weight:900; font-size:16px;">Verifi — Verification Summary</div>
+            <div style="font-size:12px;">
+              Category: <span id="printCartType"></span> • Generated: <span id="printGeneratedAt"></span>
+            </div>
+          </div>
+          <div id="nursingLogPrintContainer"></div>
+        </section>
+      </section>
+
+    </div>
+
+    <!-- =========================
+         NURSING VIEW (Paper-style)
+    ========================== -->
+    <div id="nursingView" class="hidden">
+
+      <section class="panel">
+        <div class="panelRow">
+          <div class="panelTitle">Nursing Log (Paper Style)</div>
+          <div class="panelSub" id="nursePaperMeta">Monthly record</div>
+        </div>
+
+        <div class="controlGrid" style="margin-top:10px;">
+          <div>
+            <div class="fieldLabel">Unit / Area (label)</div>
+            <input id="nurseUnitName" class="cartInput" placeholder="e.g., 4th Floor Tower / ER Area" />
+          </div>
+
+          <div>
+            <div class="fieldLabel">Month</div>
+            <input id="nurseMonth" class="cartInput" type="month" />
+          </div>
+        </div>
+
+        <div class="toolbarRow noPrint">
+          <button id="nurseAddRowBtn" class="pill pill--outline" type="button">Add Today’s Row</button>
+          <button id="nurseSaveBtn" class="pill pill--outline" type="button">Save</button>
+          <button id="nursePrintBtn" class="pill pill--outline" type="button">Print / Save PDF</button>
+          <button id="nurseClearBtn" class="pill pill--outline" type="button">Clear Month</button>
+        </div>
+
+        <div class="miniHint">
+          Nurses: mirrors your paper crash cart log (one row per day). Techs do NOT fill this out.
+        </div>
+      </section>
+
+      <section class="panel">
+        <div id="nurseTableWrap"></div>
+
+        <!-- Nursing print area -->
+        <section id="nursePrintArea">
+          <div style="margin: 0 0 10px 0;">
+            <div style="font-weight:900; font-size:16px;">Verifi — Nursing Crash Cart Log</div>
+            <div style="font-size:12px;">
+              Unit: <span id="nursePrintUnit"></span> • Month: <span id="nursePrintMonth"></span>
+            </div>
+          </div>
+          <div id="nursePrintTableWrap"></div>
+        </section>
+      </section>
+
+    </div>
+
+    <!-- ✅ Toast -->
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
