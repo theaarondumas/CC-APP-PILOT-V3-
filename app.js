@@ -1,21 +1,19 @@
 /* ===========================
-   Verifi — Crash Cart Verification
-   BUILD: 20260110-01
-   Fixes:
-   - Cache proof (visible build ID)
-   - Auto-save visible (Saved ✓)
-   - iOS-proof auto-scroll to newest card
-   - Error toasts (no silent failure)
+   Verifi — Crash Cart Verification (PRODUCTION)
+   - Auto-save on sticker edits (localStorage)
+   - Auto-scroll to newest sticker on Add (batch-friendly)
+   - Auto-open Verification Window when first cart is added
+   - Verification Window timestamps shown in #windowMeta (Started/Ended/Active + event type)
+   - iOS keyboard fix: no full re-render on each keystroke
    =========================== */
 
-const BUILD_ID = "20260110-01";
 const $ = (id) => document.getElementById(id);
 
 const LOCAL_KEY_TECH = "verifi_pilot_round_v1";
 const LOCAL_KEY_NURSE = "verifi_pilot_nurse_log_v1";
 
 /* ---------------------------
-   Toast + inline status
+   Toast (production: only important messages)
 --------------------------- */
 const toastEl = $("toast");
 let toastTimer = null;
@@ -25,31 +23,8 @@ function showToast(msg) {
   toastEl.textContent = String(msg || "");
   toastEl.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1600);
 }
-
-function setInlineStatus(msg) {
-  const el = $("inlineStatus");
-  if (!el) return;
-  el.textContent = msg ? String(msg) : "";
-}
-
-// Show runtime errors as toasts
-window.addEventListener("error", (e) => {
-  showToast(`JS error: ${e?.message || "unknown"}`);
-});
-window.addEventListener("unhandledrejection", (e) => {
-  showToast(`Promise error: ${e?.reason?.message || "unknown"}`);
-});
-
-/* ---------------------------
-   Cache proof: show build on screen
---------------------------- */
-(function showBuild() {
-  const el = $("buildId");
-  if (el) el.textContent = `Build: ${BUILD_ID} (loaded)`;
-  console.log("Verifi build loaded:", BUILD_ID);
-})();
 
 /* ---------------------------
    iOS-proof scroll helper
@@ -57,62 +32,20 @@ window.addEventListener("unhandledrejection", (e) => {
 function scrollToEl(el) {
   if (!el) return;
 
-  // 1) Try element scrollIntoView
+  // Smooth attempt
   try {
     el.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch {
     try { el.scrollIntoView(true); } catch {}
   }
 
-  // 2) Force exact Y position (iOS sometimes ignores #1)
+  // iOS fallback: force window scroll after layout settles
   setTimeout(() => {
     try {
       const y = el.getBoundingClientRect().top + window.scrollY - 12;
       window.scrollTo({ top: y, behavior: "smooth" });
     } catch {}
   }, 60);
-
-  // 3) Final hard fallback
-  setTimeout(() => {
-    try {
-      const y = el.offsetTop - 12;
-      window.scrollTo(0, y);
-    } catch {}
-  }, 120);
-}
-
-/* ---------------------------
-   Local save with explicit success/fail
---------------------------- */
-function saveTechToLocal() {
-  try {
-    localStorage.setItem(LOCAL_KEY_TECH, JSON.stringify(round));
-    return true;
-  } catch (e) {
-    showToast("⚠️ Auto-save failed (storage blocked).");
-    return false;
-  }
-}
-
-function loadTechFromLocal() {
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY_TECH);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !parsed.cartType || !Array.isArray(parsed.carts)) return false;
-    round = migrateRound(parsed);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-let lastSaveToastAt = 0;
-function toastSavedThrottled() {
-  const now = Date.now();
-  if (now - lastSaveToastAt < 1200) return;
-  lastSaveToastAt = now;
-  showToast("Saved ✓");
 }
 
 /* ---------------------------
@@ -125,15 +58,15 @@ const navNursing = $("navNursing");
 
 function showScreen(screen) {
   if (screen === "nursing") {
-    techView.classList.add("hidden");
-    nursingView.classList.remove("hidden");
-    navTech.classList.remove("active");
-    navNursing.classList.add("active");
+    techView?.classList.add("hidden");
+    nursingView?.classList.remove("hidden");
+    navTech?.classList.remove("active");
+    navNursing?.classList.add("active");
   } else {
-    nursingView.classList.add("hidden");
-    techView.classList.remove("hidden");
-    navNursing.classList.remove("active");
-    navTech.classList.add("active");
+    nursingView?.classList.add("hidden");
+    techView?.classList.remove("hidden");
+    navNursing?.classList.remove("active");
+    navTech?.classList.add("active");
   }
 }
 
@@ -152,8 +85,6 @@ const exportJsonBtn = $("exportJsonBtn");
 
 const readyToggle = $("readyToggle");
 const windowMeta = $("windowMeta");
-const windowPanel = $("windowPanel");
-const windowStatusPill = $("windowStatusPill");
 
 const roundMeta = $("roundMeta");
 const cartList = $("cartList");
@@ -164,8 +95,7 @@ const nursingLogPrintContainer = $("nursingLogPrintContainer");
 const showAllToggle = $("showAllToggle");
 const printPdfBtn = $("printPdfBtn");
 
-const scanBtn = $("scanBtn");
-
+// Impact metrics
 const metricGaps = $("metricGaps");
 const metricPaper = $("metricPaper");
 const metricMoney = $("metricMoney");
@@ -216,6 +146,9 @@ const DEPARTMENTS = {
   ]
 };
 
+/* ---------------------------
+   Paper pages per verification (TECH)
+--------------------------- */
 const DEFAULT_PAGES_PER_VERIFICATION = 2;
 const PAPER_PAGES_BY_DEPT = {
   "ICU Pavilion — Pav A": 3,
@@ -234,9 +167,13 @@ const PAPER_PAGES_BY_DEPT = {
   "Tower Extra Cart": 2
 };
 function pagesPerVerificationForCart(cart) {
-  return PAPER_PAGES_BY_DEPT[cart.department || ""] ?? DEFAULT_PAGES_PER_VERIFICATION;
+  const dept = cart.department || "";
+  return PAPER_PAGES_BY_DEPT[dept] ?? DEFAULT_PAGES_PER_VERIFICATION;
 }
 
+/* ---------------------------
+   Helpers
+--------------------------- */
 function formatTimeHM(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -247,6 +184,14 @@ function formatMoney(n) {
   const val = Math.max(0, Number(n) || 0);
   return val.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 }
+function formatLateDelta(ms) {
+  if (ms <= 0 || Number.isNaN(ms)) return "";
+  const totalMinutes = Math.round(ms / 60000);
+  if (totalMinutes < 60) return `+${totalMinutes}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes > 0 ? `+${hours}h ${minutes}m` : `+${hours}h`;
+}
 function inferVerificationEventType(isoOpenedAt) {
   if (!isoOpenedAt) return "Unspecified";
   const d = new Date(isoOpenedAt);
@@ -254,6 +199,9 @@ function inferVerificationEventType(isoOpenedAt) {
   return d.getDay() === 3 ? "Routine weekly" : "Post-use update";
 }
 
+/* ---------------------------
+   Cart model
+--------------------------- */
 function newCart(cartNo) {
   return {
     cartType: round.cartType,
@@ -278,156 +226,336 @@ function newCart(cartNo) {
   };
 }
 
+/* ---------------------------
+   Strict verification
+--------------------------- */
 function isCartVerified(cart) {
-  return !!String(cart.checkedBy||"").trim()
-    && !!String(cart.checkDate||"").trim()
-    && !!String(cart.shift||"").trim()
-    && !!String(cart.supplyExp||"").trim()
-    && !!String(cart.supplyName||"").trim()
-    && !!String(cart.drugExp||"").trim()
-    && !!String(cart.drugName||"").trim();
+  const checkedByOk = !!String(cart.checkedBy || "").trim();
+  const checkDateOk = !!String(cart.checkDate || "").trim();
+  const shiftOk = !!String(cart.shift || "").trim();
+
+  const supplyExpOk = !!String(cart.supplyExp || "").trim();
+  const supplyNameOk = !!String(cart.supplyName || "").trim();
+
+  const drugExpOk = !!String(cart.drugExp || "").trim();
+  const drugNameOk = !!String(cart.drugName || "").trim();
+
+  return checkedByOk && checkDateOk && shiftOk && supplyExpOk && supplyNameOk && drugExpOk && drugNameOk;
 }
 
 function stampEdit(cart) {
   cart.lastEditedAt = new Date().toISOString();
-  if (isCartVerified(cart) && !cart.verifiedAt) cart.verifiedAt = new Date().toISOString();
+  if (isCartVerified(cart) && !cart.verifiedAt) {
+    cart.verifiedAt = new Date().toISOString();
+  }
 }
 
+/* ---------------------------
+   Verified late (strict)
+--------------------------- */
+function isVerifiedLate(cart) {
+  if (!cart?.verifiedAt) return false;
+  if (!round?.verificationWindowClosedAt) return false;
+
+  const v = new Date(cart.verifiedAt).getTime();
+  const c = new Date(round.verificationWindowClosedAt).getTime();
+  if (Number.isNaN(v) || Number.isNaN(c)) return false;
+  return v > c;
+}
+function verifiedLateDelta(cart) {
+  if (!cart?.verifiedAt || !round?.verificationWindowClosedAt) return "";
+  const v = new Date(cart.verifiedAt).getTime();
+  const c = new Date(round.verificationWindowClosedAt).getTime();
+  if (Number.isNaN(v) || Number.isNaN(c)) return "";
+  if (v <= c) return "";
+  return formatLateDelta(v - c);
+}
+
+/* ---------------------------
+   Risk logic
+--------------------------- */
+const DUE_SOON_DAYS = 30;
+function parseISODate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso + "T00:00:00");
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+function daysBetween(a, b) {
+  const ms = 24 * 60 * 60 * 1000;
+  return Math.round((b.getTime() - a.getTime()) / ms);
+}
+function earliestDate(d1, d2) {
+  if (!d1) return d2;
+  if (!d2) return d1;
+  return d1 <= d2 ? d1 : d2;
+}
+function computeExpiryRisk(cart) {
+  const today = startOfToday();
+  const s = parseISODate(cart.supplyExp);
+  const d = parseISODate(cart.drugExp);
+  const next = earliestDate(s, d);
+
+  if (!next) return { level: "dueSoon" };
+
+  const daysLeft = daysBetween(today, next);
+  if (daysLeft < 0) return { level: "overdue" };
+  if (daysLeft <= DUE_SOON_DAYS) return { level: "dueSoon" };
+  return { level: "ok" };
+}
+
+/* ---------------------------
+   Status mapping
+--------------------------- */
 function computeVerificationPill(cart) {
-  if (!isCartVerified(cart)) return { pill: "Not verified", cls: "notVerified", level: "notVerified" };
-  if (cart.issue) return { pill: "Needs review", cls: "review", level: "review" };
-  return { pill: "Verified", cls: "verified", level: "verified" };
+  const verified = isCartVerified(cart);
+  if (!verified) return { level: "notVerified", pill: "Not verified", cls: "notVerified" };
+
+  if (isVerifiedLate(cart)) {
+    const delta = verifiedLateDelta(cart);
+    return { level: "verifiedLate", pill: delta ? `Verified late · ${delta}` : "Verified late", cls: "pending" };
+  }
+
+  const risk = computeExpiryRisk(cart);
+  if (cart.issue) return { level: "review", pill: "Needs review", cls: "review" };
+  if (risk.level === "overdue") return { level: "review", pill: "Needs review", cls: "review" };
+  if (risk.level === "dueSoon") return { level: "review", pill: "Needs review", cls: "review" };
+
+  return { level: "verified", pill: "Verified", cls: "verified" };
 }
 function isException(cart) {
   return computeVerificationPill(cart).level !== "verified";
 }
 
+/* ---------------------------
+   iOS keyboard fix: no full re-render on typing
+--------------------------- */
 function updateCartHeaderStatus(cardEl, cart) {
   const subEl = cardEl.querySelector(".cartSub");
   if (!subEl) return;
-  const s = computeVerificationPill(cart);
-  subEl.textContent = `${cart.cartType} • ${cart.department} • ${s.pill}`;
+
+  const status = computeVerificationPill(cart);
+  const verifiedAtTime = cart.verifiedAt
+    ? new Date(cart.verifiedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "";
+
+  const statusLine = `${status.pill}${verifiedAtTime ? ` · ${verifiedAtTime}` : ""}`;
+  subEl.textContent = `${cart.cartType} • ${cart.department} • ${statusLine}`;
 }
 
 function renderAfterEdit(cardEl, cart) {
+  // Update only what’s needed; DO NOT rebuild the cart cards.
   updateCartHeaderStatus(cardEl, cart);
   renderRoundMeta();
   renderTechNursingLog();
   renderImpactMetrics();
-  const ok = saveTechToLocal();
-  if (ok) toastSavedThrottled();
+  saveTechToLocal(); // auto-save on sticker edits
 }
 
-function openVerificationWindowIfNeeded() {
-  const isOpen = !!round.verificationWindowOpenedAt && !round.verificationWindowClosedAt;
-  if (isOpen) return;
-  round.verificationWindowOpenedAt = new Date().toISOString();
-  round.verificationWindowClosedAt = null;
-  round.verificationEventType = inferVerificationEventType(round.verificationWindowOpenedAt);
-  if (readyToggle) readyToggle.checked = true;
-}
-
+/* ---------------------------
+   Render: verification window meta line (PRODUCTION)
+--------------------------- */
 function renderWindowMeta() {
   if (!windowMeta) return;
-  const opened = round.verificationWindowOpenedAt ? `Started ${formatTimeHM(round.verificationWindowOpenedAt)}` : "";
-  const closed = round.verificationWindowClosedAt ? `Ended ${formatTimeHM(round.verificationWindowClosedAt)}` : "";
+
+  const opened = round.verificationWindowOpenedAt
+    ? `Started ${formatTimeHM(round.verificationWindowOpenedAt)}`
+    : "";
+
+  const closed = round.verificationWindowClosedAt
+    ? `Ended ${formatTimeHM(round.verificationWindowClosedAt)}`
+    : "";
+
   const isOpen = !!round.verificationWindowOpenedAt && !round.verificationWindowClosedAt;
   const openState = isOpen ? "Active" : "";
+
   const eventType = round.verificationEventType || "";
+
   const parts = [eventType, opened, closed, openState].filter(Boolean);
   windowMeta.textContent = parts.length ? parts.join(" • ") : "";
 }
 
-function renderVerificationWindowUI() {
-  const isOpen = !!round.verificationWindowOpenedAt && !round.verificationWindowClosedAt;
-  if (readyToggle) readyToggle.checked = isOpen;
-  windowPanel?.classList.toggle("open", isOpen);
-  if (windowStatusPill) {
-    windowStatusPill.className = `statusPill ${isOpen ? "verified" : "notVerified"}`;
-    windowStatusPill.textContent = isOpen ? "Open" : "Closed";
-  }
-  setInlineStatus(isOpen ? "Window open — add carts as you walk." : "");
-}
-
+/* ---------------------------
+   Render: department options + meta
+--------------------------- */
 function renderDepartmentOptions() {
   const opts = DEPARTMENTS[round.cartType] || [];
   departmentSelect.innerHTML = opts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
-  if (!opts.includes(round.department)) round.department = opts[0] || "";
+
+  if (!opts.includes(round.department)) {
+    round.department = opts[0] || "";
+  }
   departmentSelect.value = round.department;
 }
 
 function renderRoundMeta() {
   const c = round.carts.length;
-  roundMeta.textContent = c === 0 ? "No carts in progress" : `${round.cartType} • ${round.department} • ${c} cart${c>1?"s":""}`;
+  roundMeta.textContent = c === 0
+    ? "No carts in progress"
+    : `${round.cartType} • ${round.department} • ${c} cart${c > 1 ? "s" : ""}`;
 }
 
+/* ---------------------------
+   Auto-open window on first add
+--------------------------- */
+function openVerificationWindowIfNeeded() {
+  const isOpen = !!round.verificationWindowOpenedAt && !round.verificationWindowClosedAt;
+  if (isOpen) return;
+
+  round.verificationWindowOpenedAt = new Date().toISOString();
+  round.verificationWindowClosedAt = null;
+  round.verificationEventType = inferVerificationEventType(round.verificationWindowOpenedAt);
+
+  if (readyToggle) readyToggle.checked = true;
+}
+
+/* ---------------------------
+   CRUD
+--------------------------- */
 function addCart(cartNo) {
-  try {
-    showToast("Add pressed (debug)"); // proves the new code is running
-
-    const cleaned = String(cartNo).trim();
-    if (!cleaned) {
-      showToast("Enter a Cart ID first.");
-      cartNumberInput.focus();
-      return;
-    }
-
-    const dup = round.carts.some(c => c.cartNo === cleaned && c.department === round.department && c.cartType === round.cartType);
-    if (dup) {
-      cartNumberInput.value = "";
-      cartNumberInput.placeholder = "Duplicate — already added";
-      showToast("Duplicate ID detected.");
-      return;
-    }
-
-    if (round.carts.length === 0) {
-      openVerificationWindowIfNeeded();
-      showToast("Verification window opened.");
-    }
-
-    round.carts.push(newCart(cleaned));
-    currentCartIndex = round.carts.length - 1;
-
-    cartNumberInput.value = "";
-    cartNumberInput.placeholder = "Enter cart ID (numbers)";
-
-    saveTechToLocal();
-    renderTechAll();
-
-    // Strongest iOS-safe scroll sequence
-    setTimeout(() => {
-      const cards = cartList?.querySelectorAll(".cartCard");
-      const last = cards?.[cards.length - 1];
-      if (!last) {
-        showToast("No card found (debug)");
-        return;
-      }
-      scrollToEl(last);
-      const firstField = last.querySelector(".supplyName");
-      if (firstField) setTimeout(() => firstField.focus(), 250);
-    }, 80);
-
-    showToast("Cart added ✔︎");
-  } catch (e) {
-    showToast(`Add failed: ${e?.message || "unknown"}`);
+  const cleaned = String(cartNo).trim();
+  if (!cleaned) {
+    showToast("Enter a Cart ID first.");
+    cartNumberInput?.focus();
+    return;
   }
+
+  const dup = round.carts.some(c =>
+    c.cartNo === cleaned &&
+    c.department === round.department &&
+    c.cartType === round.cartType
+  );
+  if (dup) {
+    cartNumberInput.value = "";
+    cartNumberInput.placeholder = "Duplicate — already added";
+    showToast("Duplicate ID detected.");
+    return;
+  }
+
+  if (round.carts.length === 0) {
+    openVerificationWindowIfNeeded();
+  }
+
+  round.carts.push(newCart(cleaned));
+  currentCartIndex = round.carts.length - 1;
+
+  cartNumberInput.value = "";
+  cartNumberInput.placeholder = "Enter cart ID (numbers)";
+
+  saveTechToLocal();
+  renderTechAll();
+
+  // Auto-scroll to newest sticker/card
+  setTimeout(() => {
+    const cards = cartList?.querySelectorAll(".cartCard");
+    const last = cards?.[cards.length - 1];
+    if (last) {
+      scrollToEl(last);
+
+      // Focus first field on sticker (optional but helpful)
+      const firstField = last.querySelector(".supplyName");
+      if (firstField) setTimeout(() => firstField.focus(), 200);
+    }
+  }, 60);
+
+  showToast("Cart added ✔︎");
 }
 
 function removeCart(index) {
   round.carts.splice(index, 1);
-  currentCartIndex = round.carts.length ? round.carts.length - 1 : -1;
+
+  if (round.carts.length === 0) {
+    currentCartIndex = -1;
+  } else if (currentCartIndex === index) {
+    currentCartIndex = round.carts.length - 1;
+  } else if (index < currentCartIndex) {
+    currentCartIndex = Math.max(0, currentCartIndex - 1);
+  }
+
   saveTechToLocal();
   renderTechAll();
 }
 
-function cartCardHTML(cart, index, isCurrent=false) {
-  const s = computeVerificationPill(cart);
+/* ---------------------------
+   Shift + issue wiring (uses renderAfterEdit)
+--------------------------- */
+function wireShiftButtons(cart, cardEl) {
+  const buttons = cardEl.querySelectorAll(".shiftBtn");
+  buttons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const selected = btn.getAttribute("data-shift");
+      cart.shift = selected;
+      stampEdit(cart);
+
+      buttons.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      renderAfterEdit(cardEl, cart);
+    });
+  });
+
+  if (cart.shift) {
+    buttons.forEach(b => {
+      if (b.getAttribute("data-shift") === cart.shift) b.classList.add("active");
+    });
+  }
+}
+
+function syncIssueUI(cart, cardEl) {
+  const issueCheckbox = cardEl.querySelector(".issueCheckbox");
+  const noteRow = cardEl.querySelector(".issueNoteRow");
+  const noteInput = cardEl.querySelector(".issueNoteInput");
+
+  const apply = () => {
+    cart.issue = issueCheckbox.checked;
+
+    if (cart.issue) {
+      noteRow.classList.remove("hidden");
+      cardEl.style.outline = "4px solid rgba(244,162,27,.55)";
+    } else {
+      noteRow.classList.add("hidden");
+      cart.issueNote = "";
+      noteInput.value = "";
+      cardEl.style.outline = "none";
+    }
+
+    stampEdit(cart);
+    renderAfterEdit(cardEl, cart);
+  };
+
+  issueCheckbox.addEventListener("change", apply);
+  noteInput.addEventListener("input", () => {
+    cart.issueNote = noteInput.value;
+    stampEdit(cart);
+    renderAfterEdit(cardEl, cart);
+  });
+
+  issueCheckbox.checked = !!cart.issue;
+  noteInput.value = cart.issueNote || "";
+  apply();
+}
+
+/* ---------------------------
+   Cards
+--------------------------- */
+function cartCardHTML(cart, index, isCurrent = false) {
+  const status = computeVerificationPill(cart);
+
+  const verifiedAtTime = cart.verifiedAt
+    ? new Date(cart.verifiedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "";
+
+  const statusLine = `${status.pill}${verifiedAtTime ? ` · ${verifiedAtTime}` : ""}`;
+
   return `
     <div class="cartCard ${isCurrent ? "current" : ""}" data-index="${index}">
       <div class="cartHeader">
         <div>
           <div class="cartTitle">Cart # ${escapeHtml(cart.cartNo)}</div>
-          <div class="cartSub">${escapeHtml(cart.cartType)} • ${escapeHtml(cart.department)} • ${escapeHtml(s.pill)}</div>
+          <div class="cartSub">${escapeHtml(cart.cartType)} • ${escapeHtml(cart.department)} • ${escapeHtml(statusLine)}</div>
         </div>
         <div class="cartActions noPrint">
           <button class="iconBtn removeBtn" type="button" title="Remove">✕</button>
@@ -504,7 +632,9 @@ function cartCardHTML(cart, index, isCurrent=false) {
 }
 
 function renderCartCards() {
-  cartList.innerHTML = round.carts.map((c,i) => cartCardHTML(c,i, i===currentCartIndex)).join("");
+  cartList.innerHTML = round.carts
+    .map((c, i) => cartCardHTML(c, i, i === currentCartIndex))
+    .join("");
 
   cartList.querySelectorAll(".cartCard").forEach((cardEl) => {
     const idx = Number(cardEl.getAttribute("data-index"));
@@ -518,56 +648,162 @@ function renderCartCards() {
     const checkedBy = cardEl.querySelector(".checkedBy");
     const drugExp = cardEl.querySelector(".drugExp");
     const drugName = cardEl.querySelector(".drugName");
-    const issueCheckbox = cardEl.querySelector(".issueCheckbox");
-    const issueNoteInput = cardEl.querySelector(".issueNoteInput");
-    const shiftBtns = cardEl.querySelectorAll(".shiftBtn");
 
-    supplyName.addEventListener("input", () => { cart.supplyName = supplyName.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
-    supplyExp.addEventListener("change", () => { cart.supplyExp = supplyExp.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
-    checkDate.addEventListener("change", () => { cart.checkDate = checkDate.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
-    checkedBy.addEventListener("input", () => { cart.checkedBy = checkedBy.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
-    drugExp.addEventListener("change", () => { cart.drugExp = drugExp.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
-    drugName.addEventListener("input", () => { cart.drugName = drugName.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
-
-    shiftBtns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        cart.shift = btn.getAttribute("data-shift") || "";
-        stampEdit(cart);
-        shiftBtns.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        renderAfterEdit(cardEl, cart);
-      });
-      if (cart.shift && btn.getAttribute("data-shift") === cart.shift) btn.classList.add("active");
-    });
-
-    issueCheckbox.addEventListener("change", () => {
-      cart.issue = issueCheckbox.checked;
+    // No full render on input (keeps iOS keyboard open)
+    supplyName.addEventListener("input", () => {
+      cart.supplyName = supplyName.value;
       stampEdit(cart);
       renderAfterEdit(cardEl, cart);
     });
 
-    issueNoteInput?.addEventListener("input", () => {
-      cart.issueNote = issueNoteInput.value;
+    supplyExp.addEventListener("change", () => {
+      cart.supplyExp = supplyExp.value;
       stampEdit(cart);
       renderAfterEdit(cardEl, cart);
     });
+
+    checkDate.addEventListener("change", () => {
+      cart.checkDate = checkDate.value;
+      stampEdit(cart);
+      renderAfterEdit(cardEl, cart);
+    });
+
+    checkedBy.addEventListener("input", () => {
+      cart.checkedBy = checkedBy.value;
+      stampEdit(cart);
+      renderAfterEdit(cardEl, cart);
+    });
+
+    drugExp.addEventListener("change", () => {
+      cart.drugExp = drugExp.value;
+      stampEdit(cart);
+      renderAfterEdit(cardEl, cart);
+    });
+
+    drugName.addEventListener("input", () => {
+      cart.drugName = drugName.value;
+      stampEdit(cart);
+      renderAfterEdit(cardEl, cart);
+    });
+
+    wireShiftButtons(cart, cardEl);
+    syncIssueUI(cart, cardEl);
   });
+}
+
+/* ---------------------------
+   Summary table
+--------------------------- */
+function groupByDepartment(rows) {
+  const map = new Map();
+  rows.forEach(r => {
+    const dept = r.department || "Unassigned";
+    if (!map.has(dept)) map.set(dept, []);
+    map.get(dept).push(r);
+  });
+  return Array.from(map.entries()).sort((a,b) => a[0].localeCompare(b[0]));
 }
 
 function renderNursingTable(targetEl, rows) {
   if (!targetEl) return;
+
   if (rows.length === 0) {
     targetEl.innerHTML = `<div style="color:rgba(234,242,247,.65); padding:10px;">No issues detected.</div>`;
     return;
   }
-  targetEl.innerHTML = `<div style="color:rgba(234,242,247,.65); padding:10px;">(Summary table unchanged in this debug build)</div>`;
+
+  const groups = groupByDepartment(rows);
+
+  targetEl.innerHTML = groups.map(([dept, items]) => {
+    const tableRows = items.map(cart => {
+      const status = computeVerificationPill(cart);
+      const supplyExp = cart.supplyExp || "—";
+      const drugExp = cart.drugExp || "—";
+      const checkedBy = cart.checkedBy || "—";
+      const checkDate = cart.checkDate || "—";
+      const shift = cart.shift || "—";
+      const noteIcon = cart.issue && cart.issueNote ? " 📝" : "";
+
+      return `
+        <tr>
+          <td>${escapeHtml(cart.cartNo || "—")}</td>
+          <td>${escapeHtml(supplyExp)}</td>
+          <td>${escapeHtml(drugExp)}</td>
+          <td>${escapeHtml(checkedBy)} • ${escapeHtml(checkDate)} • ${escapeHtml(shift)}${noteIcon}</td>
+          <td><span class="statusPill ${escapeHtml(status.cls)}">${escapeHtml(status.pill)}</span></td>
+        </tr>
+      `;
+    }).join("");
+
+    return `
+      <div class="groupHeader">${escapeHtml(dept)}</div>
+      <table class="nurseTable">
+        <thead>
+          <tr>
+            <th>Cart ID</th>
+            <th>Supply Exp</th>
+            <th>Medication Exp</th>
+            <th>Verification</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    `;
+  }).join("");
 }
 
 function renderTechNursingLog() {
   const scoped = round.carts.filter(c => c.cartType === round.cartType);
   const rows = showAll ? scoped : scoped.filter(isException);
-  nursingMeta.textContent = showAll ? "Showing all" : "Showing exceptions only";
+
+  let meta = showAll ? "Showing all" : "Showing exceptions only";
+
+  const openedAt = round.verificationWindowOpenedAt
+    ? `Started ${formatTimeHM(round.verificationWindowOpenedAt)}`
+    : "";
+  const closedAt = round.verificationWindowClosedAt
+    ? `Ended ${formatTimeHM(round.verificationWindowClosedAt)}`
+    : "";
+
+  const windowLine = [openedAt, closedAt].filter(Boolean).join(" • ");
+  if (windowLine) meta += ` • ${windowLine}`;
+
+  nursingMeta.textContent = meta;
   renderNursingTable(nursingLogContainer, rows);
+}
+
+function renderTechNursingLogForPrint() {
+  $("printCartType").textContent = round.cartType;
+
+  const generated = new Date().toLocaleString();
+  const openedAt = round.verificationWindowOpenedAt
+    ? `Started ${formatTimeHM(round.verificationWindowOpenedAt)}`
+    : "";
+  const closedAt = round.verificationWindowClosedAt
+    ? `Ended ${formatTimeHM(round.verificationWindowClosedAt)}`
+    : "";
+  const eventType = round.verificationEventType || "";
+  const windowLine = [eventType, openedAt, closedAt].filter(Boolean).join(" • ");
+  const suffix = windowLine ? ` • ${windowLine}` : "";
+
+  $("printGeneratedAt").textContent = generated + suffix;
+
+  const scoped = round.carts.filter(c => c.cartType === round.cartType);
+  const rows = showAll ? scoped : scoped.filter(isException);
+  renderNursingTable(nursingLogPrintContainer, rows);
+}
+
+/* ---------------------------
+   GLOBAL impact metrics
+--------------------------- */
+function countGapsSurfaced(carts) {
+  let gaps = 0;
+  carts.forEach(c => {
+    const s = computeVerificationPill(c);
+    if (s.level !== "verified") gaps += 1;
+  });
+  return gaps;
 }
 
 function renderImpactMetrics() {
@@ -575,15 +811,27 @@ function renderImpactMetrics() {
 
   const all = round.carts;
   const verified = all.filter(isCartVerified);
-  metricGaps.textContent = String(all.filter(c => computeVerificationPill(c).level !== "verified").length);
-  metricPaper.textContent = String(verified.reduce((sum, cart) => sum + pagesPerVerificationForCart(cart), 0));
-  metricMoney.textContent = formatMoney(0);
+
+  const gaps = countGapsSurfaced(all);
+  const paperAvoided = verified.reduce((sum, cart) => sum + pagesPerVerificationForCart(cart), 0);
+
+  const paperSavedDollars = paperAvoided * IMPACT.costPerPage;
+  const laborSavedDollars = (verified.length * IMPACT.minutesSavedPerVerified / 60) * IMPACT.laborCostPerHour;
+  const totalSaved = paperSavedDollars + laborSavedDollars;
+
+  metricGaps.textContent = String(gaps);
+  metricPaper.textContent = String(paperAvoided);
+  metricMoney.textContent = formatMoney(totalSaved);
 }
 
+/* ---------------------------
+   Local save/load (migration)
+--------------------------- */
 function migrateRound(parsed) {
   if (typeof parsed.verificationWindowOpenedAt === "undefined") parsed.verificationWindowOpenedAt = null;
   if (typeof parsed.verificationWindowClosedAt === "undefined") parsed.verificationWindowClosedAt = null;
   if (typeof parsed.verificationEventType === "undefined") parsed.verificationEventType = "Unspecified";
+
   if (Array.isArray(parsed.carts)) {
     parsed.carts.forEach(c => {
       if (typeof c.verifiedAt === "undefined") c.verifiedAt = null;
@@ -593,9 +841,44 @@ function migrateRound(parsed) {
   return parsed;
 }
 
+function saveTechToLocal() {
+  try {
+    localStorage.setItem(LOCAL_KEY_TECH, JSON.stringify(round));
+    return true;
+  } catch {
+    showToast("⚠️ Auto-save failed (storage blocked).");
+    return false;
+  }
+}
+
+function loadTechFromLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY_TECH);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.cartType || !Array.isArray(parsed.carts)) return false;
+    round = migrateRound(parsed);
+    return true;
+  } catch { return false; }
+}
+
+function downloadJSON(data, filename = "verifi_verification_record.json") {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ---------------------------
+   Main render (full render only when needed)
+--------------------------- */
 function renderTechAll() {
   renderWindowMeta();
-  renderVerificationWindowUI();
   renderDepartmentOptions();
   renderRoundMeta();
   renderCartCards();
@@ -604,14 +887,16 @@ function renderTechAll() {
 }
 
 /* ---------------------------
-   Events
+   Tech events
 --------------------------- */
 cartTypeTabs?.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-type]");
   if (!btn) return;
+
   round.cartType = btn.getAttribute("data-type");
   document.querySelectorAll("#cartTypeTabs .tab").forEach(t => t.classList.remove("active"));
   btn.classList.add("active");
+
   renderDepartmentOptions();
   saveTechToLocal();
   renderTechAll();
@@ -629,7 +914,7 @@ cartNumberInput?.addEventListener("keydown", (e) => {
 });
 
 clearRoundBtn?.addEventListener("click", () => {
-  if (!confirm("Reset this verification? This clears all carts.")) return;
+  if (!confirm("Reset this verification? This clears all carts on this screen.")) return;
   round.carts = [];
   currentCartIndex = -1;
   saveTechToLocal();
@@ -637,21 +922,22 @@ clearRoundBtn?.addEventListener("click", () => {
   showToast("Cleared.");
 });
 
-readyToggle?.addEventListener("change", () => {
-  const open = readyToggle.checked;
-  if (open) {
-    round.verificationWindowOpenedAt = new Date().toISOString();
-    round.verificationWindowClosedAt = null;
-    round.verificationEventType = inferVerificationEventType(round.verificationWindowOpenedAt);
-    saveTechToLocal();
-    renderTechAll();
-    showToast("Verification window opened.");
-  } else {
-    round.verificationWindowClosedAt = new Date().toISOString();
-    saveTechToLocal();
-    renderTechAll();
-    showToast("Verification window closed.");
-  }
+exportJsonBtn?.addEventListener("click", () => {
+  const all = round.carts;
+  const verified = all.filter(isCartVerified);
+
+  const exportRecord = {
+    ...round,
+    impact: {
+      scope: "GLOBAL",
+      gapsSurfaced: countGapsSurfaced(all),
+      paperAvoidedPages: verified.reduce((sum, cart) => sum + pagesPerVerificationForCart(cart), 0),
+      assumptions: { ...IMPACT }
+    }
+  };
+
+  downloadJSON(exportRecord, `verifi_GLOBAL_verification_record.json`);
+  showToast("Exported JSON.");
 });
 
 showAllToggle?.addEventListener("change", () => {
@@ -659,33 +945,180 @@ showAllToggle?.addEventListener("change", () => {
   renderTechNursingLog();
 });
 
-printPdfBtn?.addEventListener("click", () => window.print());
+printPdfBtn?.addEventListener("click", () => {
+  renderTechNursingLogForPrint();
+  window.print();
+});
 
-scanBtn?.addEventListener("click", () => {
-  showToast("Scan coming soon — enter Cart ID for now.");
-  cartNumberInput?.focus();
+readyToggle?.addEventListener("change", () => {
+  const open = readyToggle.checked;
+
+  if (open) {
+    round.verificationWindowOpenedAt = new Date().toISOString();
+    round.verificationWindowClosedAt = null;
+    round.verificationEventType = inferVerificationEventType(round.verificationWindowOpenedAt);
+    saveTechToLocal();
+    renderTechAll();
+    showToast("Window opened.");
+    setTimeout(() => cartNumberInput?.focus(), 50);
+  } else {
+    round.verificationWindowClosedAt = new Date().toISOString();
+    saveTechToLocal();
+    renderTechAll();
+    showToast("Window closed.");
+  }
+});
+
+/* ===========================
+   NURSING MODULE (paper-style)
+=========================== */
+const nurseUnitName = $("nurseUnitName");
+const nurseMonth = $("nurseMonth");
+const nurseAddRowBtn = $("nurseAddRowBtn");
+const nurseSaveBtn = $("nurseSaveBtn");
+const nursePrintBtn = $("nursePrintBtn");
+const nurseClearBtn = $("nurseClearBtn");
+const nurseTableWrap = $("nurseTableWrap");
+const nursePrintTableWrap = $("nursePrintTableWrap");
+const nursePaperMeta = $("nursePaperMeta");
+
+let nurseLog = { unitName: "", month: "", rows: [] };
+
+const NURSE_COLS = [
+  { key:"day", label:"Day" },
+  { key:"lockNo", label:"Cart Lock #" },
+  { key:"sealed", label:"Cart Sealed" },
+  { key:"plugged", label:"Cart Plugged" },
+  { key:"defib", label:"Defib Test" },
+  { key:"supplyExpPresent", label:"Supplies Exp Date Present" },
+  { key:"medExpPresent", label:"Med Drawer Exp Date Present" },
+  { key:"contents", label:"Contents Listed" },
+  { key:"suction", label:"Suction OK" },
+  { key:"o2", label:"O₂ Green Zone" },
+  { key:"signature", label:"Signature" }
+];
+
+function todayDayOfMonth() {
+  return String(new Date().getDate());
+}
+function newNurseRow(day) {
+  return {
+    day: day || todayDayOfMonth(),
+    lockNo: "",
+    sealed: false,
+    plugged: false,
+    defib: false,
+    supplyExpPresent: false,
+    medExpPresent: false,
+    contents: false,
+    suction: false,
+    o2: false,
+    signature: ""
+  };
+}
+function saveNurseToLocal() {
+  nurseLog.unitName = nurseUnitName?.value || "";
+  nurseLog.month = nurseMonth?.value || "";
+  try { localStorage.setItem(LOCAL_KEY_NURSE, JSON.stringify(nurseLog)); } catch {}
+  if (nursePaperMeta) nursePaperMeta.textContent = `Saved • ${nurseLog.rows.length} row(s)`;
+}
+function loadNurseFromLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY_NURSE);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.rows)) return false;
+    nurseLog = parsed;
+    return true;
+  } catch { return false; }
+}
+
+function renderNurseTable(targetEl, rows, isPrint=false) {
+  if (!targetEl) return;
+
+  const th = NURSE_COLS.map(c => `<th>${escapeHtml(c.label)}</th>`).join("");
+  const body = rows.map((r, idx) => {
+    const tds = NURSE_COLS.map(col => {
+      if (col.key === "day") {
+        return isPrint
+          ? `<td>${escapeHtml(r.day)}</td>`
+          : `<td><input class="paperInput" data-i="${idx}" data-k="day" value="${escapeHtml(r.day)}" /></td>`;
+      }
+      if (col.key === "lockNo" || col.key === "signature") {
+        return isPrint
+          ? `<td>${escapeHtml(r[col.key] || "")}</td>`
+          : `<td><input class="paperInput" data-i="${idx}" data-k="${col.key}" value="${escapeHtml(r[col.key] || "")}" /></td>`;
+      }
+      return isPrint
+        ? `<td>${r[col.key] ? "Y" : ""}</td>`
+        : `<td><input class="paperChk" type="checkbox" data-i="${idx}" data-k="${col.key}" ${r[col.key] ? "checked" : ""} /></td>`;
+    }).join("");
+    return `<tr>${tds}</tr>`;
+  }).join("");
+
+  targetEl.innerHTML = `
+    <table class="paperTable">
+      <thead><tr>${th}</tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  `;
+
+  if (isPrint) return;
+
+  targetEl.querySelectorAll("input.paperInput").forEach(inp => {
+    inp.addEventListener("input", () => {
+      const i = Number(inp.getAttribute("data-i"));
+      const k = inp.getAttribute("data-k");
+      nurseLog.rows[i][k] = inp.value;
+      saveNurseToLocal();
+    });
+  });
+
+  targetEl.querySelectorAll("input.paperChk").forEach(chk => {
+    chk.addEventListener("change", () => {
+      const i = Number(chk.getAttribute("data-i"));
+      const k = chk.getAttribute("data-k");
+      nurseLog.rows[i][k] = chk.checked;
+      saveNurseToLocal();
+    });
+  });
+}
+
+function renderNurseAll() {
+  if (nurseUnitName) nurseUnitName.value = nurseLog.unitName || "";
+  if (nurseMonth) nurseMonth.value = nurseLog.month || "";
+  renderNurseTable(nurseTableWrap, nurseLog.rows, false);
+}
+
+nurseAddRowBtn?.addEventListener("click", () => {
+  nurseLog.rows.unshift(newNurseRow(todayDayOfMonth()));
+  saveNurseToLocal();
+  renderNurseAll();
+});
+
+nurseSaveBtn?.addEventListener("click", () => {
+  saveNurseToLocal();
+  showToast("Nursing log saved.");
+});
+
+nurseClearBtn?.addEventListener("click", () => {
+  if (!confirm("Reset this month? This clears all rows.")) return;
+  nurseLog.rows = [];
+  saveNurseToLocal();
+  renderNurseAll();
+  showToast("Month cleared.");
+});
+
+nursePrintBtn?.addEventListener("click", () => {
+  $("nursePrintUnit").textContent = nurseUnitName?.value || "—";
+  $("nursePrintMonth").textContent = nurseMonth?.value || "—";
+  renderNurseTable(nursePrintTableWrap, nurseLog.rows, true);
+  window.print();
 });
 
 /* ---------------------------
-   Minimal nursing module kept as-is for now
-   (Your full nursing module can be reinserted after we confirm tech scroll/save)
+   Utilities
 --------------------------- */
-(function init() {
-  loadTechFromLocal();
-  renderDepartmentOptions();
-
-  if (!round.department) round.department = (DEPARTMENTS[round.cartType] || [])[0] || "";
-  departmentSelect.value = round.department;
-
-  currentCartIndex = round.carts.length ? round.carts.length - 1 : -1;
-
-  renderTechAll();
-  showScreen("tech");
-
-  // quick proof on load
-  showToast(`Build ${BUILD_ID} active`);
-})();
-
 function escapeHtml(str) {
   return String(str ?? "")
     .replaceAll("&", "&amp;")
@@ -694,3 +1127,42 @@ function escapeHtml(str) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
+/* ---------------------------
+   Init
+--------------------------- */
+(function init() {
+  // Tech
+  loadTechFromLocal();
+  renderDepartmentOptions();
+
+  if (!round.department) {
+    round.department = (DEPARTMENTS[round.cartType] || [])[0] || "";
+  }
+
+  document.querySelectorAll("#cartTypeTabs .tab").forEach(t => t.classList.remove("active"));
+  document.querySelector(`#cartTypeTabs .tab[data-type="${CSS.escape(round.cartType)}"]`)?.classList.add("active");
+  if (departmentSelect) departmentSelect.value = round.department;
+
+  currentCartIndex = round.carts.length ? round.carts.length - 1 : -1;
+
+  const isOpen = !!round.verificationWindowOpenedAt && !round.verificationWindowClosedAt;
+  if (readyToggle) readyToggle.checked = isOpen;
+
+  if (round.verificationWindowOpenedAt && (!round.verificationEventType || round.verificationEventType === "Unspecified")) {
+    round.verificationEventType = inferVerificationEventType(round.verificationWindowOpenedAt);
+  }
+
+  renderTechAll();
+
+  // Nursing
+  loadNurseFromLocal();
+  if (!nurseLog.month) {
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    nurseLog.month = `${now.getFullYear()}-${mm}`;
+  }
+  renderNurseAll();
+
+  showScreen("tech");
+})();
