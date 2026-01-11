@@ -11,6 +11,9 @@
 <body>
   <div class="app">
 
+    <!-- =========================
+         TOP BAR
+    ========================== -->
     <header class="topbar">
       <div class="topbar__title">
         <div class="h1">Verification Required<br/>Crash Carts</div>
@@ -37,7 +40,7 @@
     ========================== -->
     <div id="techView">
 
-      <!-- Verification Controls -->
+      <!-- Verification Setup -->
       <section class="panel" id="verificationSetupPanel">
         <div class="panelRow">
           <div class="panelTitle">Verification Setup (Tech)</div>
@@ -91,7 +94,7 @@
       <!-- Cart Cards -->
       <section id="cartList" class="cartList"></section>
 
-      <!-- Verification summary -->
+      <!-- Summary -->
       <section class="panel">
         <div class="panelRow" style="margin-bottom:10px;">
           <div class="panelTitle">Verification Summary</div>
@@ -114,12 +117,18 @@
         </div>
 
         <div class="nurseControls noPrint">
-          <div class="nurseRow">
+          <div class="nurseRow" style="gap:10px; flex-wrap:wrap;">
             <label class="pill pill--toggle" style="gap:8px;">
               <input id="showAllToggle" type="checkbox" />
               <span class="toggleTrack"></span>
               <span class="toggleLabel">Show all verifications</span>
             </label>
+
+            <!-- Sort toggle -->
+            <div class="seg" aria-label="Sort carts">
+              <button id="sortEntryBtn" class="segBtn active" type="button">By entry</button>
+              <button id="sortRiskBtn" class="segBtn" type="button">By risk</button>
+            </div>
 
             <button id="printPdfBtn" class="pill pill--outline" type="button">Export Verification Record (PDF)</button>
           </div>
@@ -197,7 +206,7 @@
   <!-- Toast -->
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Cache-bust: bump v= after deploy if iPhone Safari caches -->
-  <script src="app.js?v=2"></script>
+  <!-- Cache-bust: bump v= if Safari caches -->
+  <script src="app.js?v=99"></script>
 </body>
 </html>
