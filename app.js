@@ -1,6 +1,5 @@
 /* app.js (DROP IN)
-   PRODUCTION + Save button on sticker + Scroll back to Verification Setup
-   + Security: require close verification window before export/print
+   PRODUCTION + VERIFI button (red, all caps) + scroll to setup + security gate
 */
 
 const $ = (id) => document.getElementById(id);
@@ -83,15 +82,14 @@ const windowMeta = $("windowMeta");
 const roundMeta = $("roundMeta");
 const cartList = $("cartList");
 
+const setupPanel = $("verificationSetupPanel");
+
 const nursingMeta = $("nursingMeta");
 const nursingLogContainer = $("nursingLogContainer");
 const nursingLogPrintContainer = $("nursingLogPrintContainer");
 const showAllToggle = $("showAllToggle");
 const printPdfBtn = $("printPdfBtn");
 
-const verificationSetup = $("verificationSetup");
-
-// Impact metrics
 const metricGaps = $("metricGaps");
 const metricPaper = $("metricPaper");
 const metricMoney = $("metricMoney");
@@ -143,7 +141,7 @@ const DEPARTMENTS = {
 };
 
 /* ---------------------------
-   Paper pages per verification (TECH)
+   Paper pages per verification
 --------------------------- */
 const DEFAULT_PAGES_PER_VERIFICATION = 2;
 const PAPER_PAGES_BY_DEPT = {
@@ -200,13 +198,13 @@ function isWindowOpen() {
 }
 
 /* ---------------------------
-   SECURITY GATE: must close window before export/print
+   SECURITY GATE: close window before export/print
 --------------------------- */
 function requireClosedWindowOrConfirm(actionLabel = "submit") {
   if (!isWindowOpen()) return true;
 
   const ok = confirm(
-    `Verification Window is still OPEN.\n\nFor audit integrity, please CLOSE the Verification Window before you ${actionLabel}.\n\nClose it now?`
+    `Verification Window is still OPEN.\n\nFor security and audit integrity, please CLOSE the Verification Window before you ${actionLabel}.\n\nClose it now?`
   );
   if (!ok) return false;
 
@@ -271,7 +269,7 @@ function stampEdit(cart) {
 }
 
 /* ---------------------------
-   Verified late (strict)
+   Verified late
 --------------------------- */
 function isVerifiedLate(cart) {
   if (!cart?.verifiedAt) return false;
@@ -351,7 +349,7 @@ function isException(cart) {
 }
 
 /* ---------------------------
-   iOS keyboard fix: no full re-render on typing
+   iOS keyboard fix helpers
 --------------------------- */
 function updateCartHeaderStatus(cardEl, cart) {
   const subEl = cardEl.querySelector(".cartSub");
@@ -375,7 +373,7 @@ function renderAfterEdit(cardEl, cart) {
 }
 
 /* ---------------------------
-   Render: verification window meta line
+   Render: window meta
 --------------------------- */
 function renderWindowMeta() {
   if (!windowMeta) return;
@@ -400,6 +398,8 @@ function renderWindowMeta() {
 --------------------------- */
 function renderDepartmentOptions() {
   const opts = DEPARTMENTS[round.cartType] || [];
+  if (!departmentSelect) return;
+
   departmentSelect.innerHTML = opts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
 
   if (!opts.includes(round.department)) {
@@ -410,6 +410,7 @@ function renderDepartmentOptions() {
 
 function renderRoundMeta() {
   const c = round.carts.length;
+  if (!roundMeta) return;
   roundMeta.textContent = c === 0
     ? "No carts in progress"
     : `${round.cartType} • ${round.department} • ${c} cart${c > 1 ? "s" : ""}`;
@@ -445,8 +446,10 @@ function addCart(cartNo) {
     c.cartType === round.cartType
   );
   if (dup) {
-    cartNumberInput.value = "";
-    cartNumberInput.placeholder = "Duplicate — already added";
+    if (cartNumberInput) {
+      cartNumberInput.value = "";
+      cartNumberInput.placeholder = "Duplicate — already added";
+    }
     showToast("Duplicate ID detected.");
     return;
   }
@@ -458,13 +461,14 @@ function addCart(cartNo) {
   round.carts.push(newCart(cleaned));
   currentCartIndex = round.carts.length - 1;
 
-  cartNumberInput.value = "";
-  cartNumberInput.placeholder = "Enter cart ID (numbers)";
+  if (cartNumberInput) {
+    cartNumberInput.value = "";
+    cartNumberInput.placeholder = "Enter cart ID (numbers)";
+  }
 
   saveTechToLocal();
   renderTechAll();
 
-  // Auto-scroll to newest sticker/card
   setTimeout(() => {
     const cards = cartList?.querySelectorAll(".cartCard");
     const last = cards?.[cards.length - 1];
@@ -548,7 +552,7 @@ function syncIssueUI(cart, cardEl) {
 }
 
 /* ---------------------------
-   Cards (includes Save button on ORANGE sticker)
+   Cards
 --------------------------- */
 function cartCardHTML(cart, index, isCurrent = false) {
   const status = computeVerificationPill(cart);
@@ -637,7 +641,7 @@ function cartCardHTML(cart, index, isCurrent = false) {
         </div>
 
         <div class="stickerFooter">
-          <button type="button" class="saveStickerBtn">Save</button>
+          <button type="button" class="saveStickerBtn">VERIFI</button>
         </div>
       </section>
     </div>
@@ -645,6 +649,8 @@ function cartCardHTML(cart, index, isCurrent = false) {
 }
 
 function renderCartCards() {
+  if (!cartList) return;
+
   cartList.innerHTML = round.carts
     .map((c, i) => cartCardHTML(c, i, i === currentCartIndex))
     .join("");
@@ -662,7 +668,6 @@ function renderCartCards() {
     const drugExp = cardEl.querySelector(".drugExp");
     const drugName = cardEl.querySelector(".drugName");
 
-    // No full render on input (keeps iOS keyboard open)
     supplyName.addEventListener("input", () => {
       cart.supplyName = supplyName.value;
       stampEdit(cart);
@@ -702,19 +707,20 @@ function renderCartCards() {
     wireShiftButtons(cart, cardEl);
     syncIssueUI(cart, cardEl);
 
-    // ✅ Save button on the sticker: save + scroll back to Verification Setup
-    const saveStickerBtn = cardEl.querySelector(".saveStickerBtn");
-    saveStickerBtn?.addEventListener("click", () => {
+    // VERIFI button -> save + scroll to setup + focus Cart ID
+    const verifiBtn = cardEl.querySelector(".saveStickerBtn");
+    verifiBtn?.addEventListener("click", () => {
       stampEdit(cart);
       saveTechToLocal();
-      showToast("Saved ✓");
+      showToast("VERIFIED ✓");
 
-      // Scroll back up to setup and focus Cart ID input
-      const target = verificationSetup || cartTypeTabs?.closest(".panel") || cartTypeTabs;
-      setTimeout(() => {
-        scrollToEl(target);
-        setTimeout(() => cartNumberInput?.focus(), 200);
-      }, 60);
+      const target = setupPanel || cartTypeTabs?.closest(".panel") || cartTypeTabs;
+      if (target) {
+        setTimeout(() => {
+          scrollToEl(target);
+          setTimeout(() => cartNumberInput?.focus(), 200);
+        }, 60);
+      }
     });
   });
 }
@@ -797,7 +803,7 @@ function renderTechNursingLog() {
   const windowLine = [openedAt, closedAt].filter(Boolean).join(" • ");
   if (windowLine) meta += ` • ${windowLine}`;
 
-  nursingMeta.textContent = meta;
+  if (nursingMeta) nursingMeta.textContent = meta;
   renderNursingTable(nursingLogContainer, rows);
 }
 
@@ -823,7 +829,7 @@ function renderTechNursingLogForPrint() {
 }
 
 /* ---------------------------
-   GLOBAL impact metrics
+   Impact metrics
 --------------------------- */
 function countGapsSurfaced(carts) {
   let gaps = 0;
@@ -853,7 +859,7 @@ function renderImpactMetrics() {
 }
 
 /* ---------------------------
-   Local save/load (migration)
+   Local save/load
 --------------------------- */
 function migrateRound(parsed) {
   if (typeof parsed.verificationWindowOpenedAt === "undefined") parsed.verificationWindowOpenedAt = null;
@@ -890,6 +896,17 @@ function loadTechFromLocal() {
   } catch { return false; }
 }
 
+function loadNurseFromLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY_NURSE);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.rows)) return false;
+    nurseLog = parsed;
+    return true;
+  } catch { return false; }
+}
+
 function downloadJSON(data, filename = "verifi_verification_record.json") {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -915,7 +932,7 @@ function renderTechAll() {
 }
 
 /* ---------------------------
-   Tech events
+   Events
 --------------------------- */
 cartTypeTabs?.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-type]");
@@ -1001,7 +1018,7 @@ readyToggle?.addEventListener("change", () => {
 });
 
 /* ===========================
-   NURSING MODULE (paper-style)
+   NURSING MODULE
 =========================== */
 const nurseUnitName = $("nurseUnitName");
 const nurseMonth = $("nurseMonth");
@@ -1045,21 +1062,12 @@ function newNurseRow(day) {
     signature: ""
   };
 }
+
 function saveNurseToLocal() {
   nurseLog.unitName = nurseUnitName?.value || "";
   nurseLog.month = nurseMonth?.value || "";
   try { localStorage.setItem(LOCAL_KEY_NURSE, JSON.stringify(nurseLog)); } catch {}
   if (nursePaperMeta) nursePaperMeta.textContent = `Saved • ${nurseLog.rows.length} row(s)`;
-}
-function loadNurseFromLocal() {
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY_NURSE);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.rows)) return false;
-    nurseLog = parsed;
-    return true;
-  } catch { return false; }
 }
 
 function renderNurseTable(targetEl, rows, isPrint=false) {
@@ -1163,9 +1171,7 @@ function escapeHtml(str) {
   loadTechFromLocal();
   renderDepartmentOptions();
 
-  if (!round.department) {
-    round.department = (DEPARTMENTS[round.cartType] || [])[0] || "";
-  }
+  if (!round.department) round.department = (DEPARTMENTS[round.cartType] || [])[0] || "";
 
   document.querySelectorAll("#cartTypeTabs .tab").forEach(t => t.classList.remove("active"));
   document.querySelector(`#cartTypeTabs .tab[data-type="${CSS.escape(round.cartType)}"]`)?.classList.add("active");
