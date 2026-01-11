@@ -1,4 +1,16 @@
-/* app.js (DROP IN) — All current features + sort toggle + auto-scroll to first NON-COMPLIANT when switching to By risk */
+/* Verifi — Crash Cart Verification (PRODUCTION)
+   - Tech + Nursing views
+   - Verification Window timestamps (Started/Ended/Active + event type)
+   - Cart ID number pad
+   - Add cart -> auto-scroll to newest sticker
+   - First add -> auto-open window
+   - VERIFI button (save + scroll to setup + focus Cart ID)
+   - Enterprise expiry badges + days (COMPLIANT / ATTENTION REQUIRED / NON-COMPLIANT)
+   - Summary auto-sorts highest risk first
+   - Sort carts toggle: By entry | By risk
+   - Switching to By risk auto-scrolls to first NON-COMPLIANT cart
+   - Security gate: export/print forces close window if open
+*/
 
 const $ = (id) => document.getElementById(id);
 
@@ -19,7 +31,9 @@ function showToast(msg) {
 /* iOS-proof scroll helper */
 function scrollToEl(el) {
   if (!el) return;
-  try { el.scrollIntoView({ behavior: "smooth", block: "start" }); } catch { try { el.scrollIntoView(true); } catch {} }
+  try { el.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  catch { try { el.scrollIntoView(true); } catch {} }
+
   setTimeout(() => {
     try {
       const y = el.getBoundingClientRect().top + window.scrollY - 12;
@@ -33,6 +47,7 @@ const techView = $("techView");
 const nursingView = $("nursingView");
 const navTech = $("navTech");
 const navNursing = $("navNursing");
+
 function showScreen(screen) {
   if (screen === "nursing") {
     techView?.classList.add("hidden");
@@ -56,8 +71,10 @@ const cartNumberInput = $("cartNumberInput");
 const addCartBtn = $("addCartBtn");
 const clearRoundBtn = $("clearRoundBtn");
 const exportJsonBtn = $("exportJsonBtn");
+
 const readyToggle = $("readyToggle");
 const windowMeta = $("windowMeta");
+
 const roundMeta = $("roundMeta");
 const cartList = $("cartList");
 const setupPanel = $("verificationSetupPanel");
@@ -118,7 +135,6 @@ const DEPARTMENTS = {
   ]
 };
 
-/* Pages per verification */
 const DEFAULT_PAGES_PER_VERIFICATION = 2;
 const PAPER_PAGES_BY_DEPT = {
   "ICU Pavilion — Pav A": 3,
@@ -137,11 +153,10 @@ const PAPER_PAGES_BY_DEPT = {
   "Tower Extra Cart": 2
 };
 function pagesPerVerificationForCart(cart) {
-  const dept = cart.department || "";
-  return PAPER_PAGES_BY_DEPT[dept] ?? DEFAULT_PAGES_PER_VERIFICATION;
+  return PAPER_PAGES_BY_DEPT[cart.department || ""] ?? DEFAULT_PAGES_PER_VERIFICATION;
 }
 
-/* Time + money helpers */
+/* Helpers */
 function formatTimeHM(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -167,14 +182,14 @@ function inferVerificationEventType(isoOpenedAt) {
   return d.getDay() === 3 ? "Routine weekly" : "Post-use update";
 }
 
-/* Window state */
 function isWindowOpen() {
   return !!round.verificationWindowOpenedAt && !round.verificationWindowClosedAt;
 }
 
-/* Security gate: close window before export/print */
+/* Security gate */
 function requireClosedWindowOrConfirm(actionLabel = "submit") {
   if (!isWindowOpen()) return true;
+
   const ok = confirm(
     `Verification Window is still OPEN.\n\nFor security and audit integrity, please CLOSE the Verification Window before you ${actionLabel}.\n\nClose it now?`
   );
@@ -182,6 +197,7 @@ function requireClosedWindowOrConfirm(actionLabel = "submit") {
 
   round.verificationWindowClosedAt = new Date().toISOString();
   if (readyToggle) readyToggle.checked = false;
+
   saveTechToLocal();
   renderTechAll();
   showToast("Window closed.");
@@ -210,14 +226,13 @@ function newCart(cartNo) {
 
 /* Strict verification */
 function isCartVerified(cart) {
-  const checkedByOk = !!String(cart.checkedBy || "").trim();
-  const checkDateOk = !!String(cart.checkDate || "").trim();
-  const shiftOk = !!String(cart.shift || "").trim();
-  const supplyExpOk = !!String(cart.supplyExp || "").trim();
-  const supplyNameOk = !!String(cart.supplyName || "").trim();
-  const drugExpOk = !!String(cart.drugExp || "").trim();
-  const drugNameOk = !!String(cart.drugName || "").trim();
-  return checkedByOk && checkDateOk && shiftOk && supplyExpOk && supplyNameOk && drugExpOk && drugNameOk;
+  return !!String(cart.checkedBy || "").trim()
+    && !!String(cart.checkDate || "").trim()
+    && !!String(cart.shift || "").trim()
+    && !!String(cart.supplyExp || "").trim()
+    && !!String(cart.supplyName || "").trim()
+    && !!String(cart.drugExp || "").trim()
+    && !!String(cart.drugName || "").trim();
 }
 function stampEdit(cart) {
   cart.lastEditedAt = new Date().toISOString();
@@ -274,7 +289,7 @@ function computeExpiryRisk(cart) {
   return { level: "ok" };
 }
 
-/* Enterprise badge wording + days remaining */
+/* Enterprise badge wording + days */
 function dateRiskLabel(dateStr) {
   if (!dateStr) return { cls: "", label: "—" };
   const d = new Date(dateStr + "T00:00:00");
@@ -310,10 +325,9 @@ function updateStickerBadges(cardEl, cart) {
   }
 }
 
-/* Status mapping (summary pills) */
+/* Summary pills */
 function computeVerificationPill(cart) {
-  const verified = isCartVerified(cart);
-  if (!verified) return { level: "notVerified", pill: "Not verified", cls: "notVerified" };
+  if (!isCartVerified(cart)) return { level: "notVerified", pill: "Not verified", cls: "notVerified" };
 
   if (isVerifiedLate(cart)) {
     const delta = verifiedLateDelta(cart);
@@ -331,7 +345,7 @@ function isException(cart) {
   return computeVerificationPill(cart).level !== "verified";
 }
 
-/* Risk sort helpers (highest risk first) */
+/* Highest risk first sorting */
 function earliestExpiryDate(cart) {
   const s = parseISODate(cart.supplyExp);
   const d = parseISODate(cart.drugExp);
@@ -343,21 +357,12 @@ function daysLeftToEarliestExpiry(cart) {
   return daysBetween(startOfToday(), next);
 }
 function riskSortScore(cart) {
-  // 0 = NON-COMPLIANT (issue or expired)
   if (cart.issue) return 0;
   const risk = computeExpiryRisk(cart);
   if (risk.level === "overdue") return 0;
-
-  // 1 = ATTENTION REQUIRED (due soon)
   if (risk.level === "dueSoon") return 1;
-
-  // 2 = NOT VERIFIED
   if (!isCartVerified(cart)) return 2;
-
-  // 3 = VERIFIED LATE
   if (isVerifiedLate(cart)) return 3;
-
-  // 4 = VERIFIED
   return 4;
 }
 function sortByHighestRiskFirst(a, b) {
@@ -374,20 +379,20 @@ function sortByHighestRiskFirst(a, b) {
   return String(a.cartNo || "").localeCompare(String(b.cartNo || ""));
 }
 
-/* Auto-scroll to first NON-COMPLIANT after switching to By risk */
+/* Auto-scroll to first NON-COMPLIANT when switching to By risk */
 function scrollToFirstNonCompliantCard() {
   const indices = round.carts.map((_, i) => i);
   indices.sort((ia, ib) => sortByHighestRiskFirst(round.carts[ia], round.carts[ib]));
-  const firstNonCompliantIndex = indices.find(i => riskSortScore(round.carts[i]) === 0);
-  if (firstNonCompliantIndex === undefined) return;
+  const first = indices.find(i => riskSortScore(round.carts[i]) === 0);
+  if (first === undefined) return;
 
   setTimeout(() => {
-    const el = cartList?.querySelector(`.cartCard[data-index="${firstNonCompliantIndex}"]`);
+    const el = cartList?.querySelector(`.cartCard[data-index="${first}"]`);
     if (el) scrollToEl(el);
   }, 80);
 }
 
-/* Update just header + badges without full re-render on typing */
+/* Render helpers (no full rerender on typing) */
 function updateCartHeaderStatus(cardEl, cart) {
   const subEl = cardEl.querySelector(".cartSub");
   if (!subEl) return;
@@ -410,7 +415,7 @@ function renderAfterEdit(cardEl, cart) {
   saveTechToLocal();
 }
 
-/* Render: window meta line */
+/* Window meta */
 function renderWindowMeta() {
   if (!windowMeta) return;
 
@@ -423,18 +428,18 @@ function renderWindowMeta() {
   windowMeta.textContent = parts.length ? parts.join(" • ") : "";
 }
 
-/* Department options + meta */
+/* Department options */
 function renderDepartmentOptions() {
   const opts = DEPARTMENTS[round.cartType] || [];
   if (!departmentSelect) return;
-
   departmentSelect.innerHTML = opts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
   if (!opts.includes(round.department)) round.department = opts[0] || "";
   departmentSelect.value = round.department;
 }
+
 function renderRoundMeta() {
-  const c = round.carts.length;
   if (!roundMeta) return;
+  const c = round.carts.length;
   roundMeta.textContent = c === 0 ? "No carts in progress" : `${round.cartType} • ${round.department} • ${c} cart${c > 1 ? "s" : ""}`;
 }
 
@@ -458,10 +463,8 @@ function addCart(cartNo) {
 
   const dup = round.carts.some(c => c.cartNo === cleaned && c.department === round.department && c.cartType === round.cartType);
   if (dup) {
-    if (cartNumberInput) {
-      cartNumberInput.value = "";
-      cartNumberInput.placeholder = "Duplicate — already added";
-    }
+    cartNumberInput.value = "";
+    cartNumberInput.placeholder = "Duplicate — already added";
     showToast("Duplicate ID detected.");
     return;
   }
@@ -471,15 +474,12 @@ function addCart(cartNo) {
   round.carts.push(newCart(cleaned));
   currentCartIndex = round.carts.length - 1;
 
-  if (cartNumberInput) {
-    cartNumberInput.value = "";
-    cartNumberInput.placeholder = "Enter cart ID (numbers)";
-  }
+  cartNumberInput.value = "";
+  cartNumberInput.placeholder = "Enter cart ID (numbers)";
 
   saveTechToLocal();
   renderTechAll();
 
-  // Auto-scroll to newest sticker
   setTimeout(() => {
     const el = cartList?.querySelector(`.cartCard[data-index="${currentCartIndex}"]`);
     if (el) {
@@ -494,7 +494,6 @@ function addCart(cartNo) {
 
 function removeCart(index) {
   round.carts.splice(index, 1);
-
   if (round.carts.length === 0) currentCartIndex = -1;
   else if (currentCartIndex === index) currentCartIndex = round.carts.length - 1;
   else if (index < currentCartIndex) currentCartIndex = Math.max(0, currentCartIndex - 1);
@@ -508,7 +507,7 @@ function wireShiftButtons(cart, cardEl) {
   const buttons = cardEl.querySelectorAll(".shiftBtn");
   buttons.forEach(btn => {
     btn.addEventListener("click", () => {
-      cart.shift = btn.getAttribute("data-shift");
+      cart.shift = btn.getAttribute("data-shift") || "";
       stampEdit(cart);
       buttons.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
@@ -530,14 +529,11 @@ function syncIssueUI(cart, cardEl) {
 
   const apply = () => {
     cart.issue = issueCheckbox.checked;
-    if (cart.issue) {
-      noteRow.classList.remove("hidden");
-      cardEl.style.outline = "4px solid rgba(176,0,0,.20)";
-    } else {
+    if (cart.issue) noteRow.classList.remove("hidden");
+    else {
       noteRow.classList.add("hidden");
       cart.issueNote = "";
       noteInput.value = "";
-      cardEl.style.outline = "none";
     }
     stampEdit(cart);
     renderAfterEdit(cardEl, cart);
@@ -555,10 +551,12 @@ function syncIssueUI(cart, cardEl) {
   apply();
 }
 
-/* Card HTML (with badges + VERIFI) */
+/* Card HTML */
 function cartCardHTML(cart, index, isCurrent = false) {
   const status = computeVerificationPill(cart);
-  const verifiedAtTime = cart.verifiedAt ? new Date(cart.verifiedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+  const verifiedAtTime = cart.verifiedAt
+    ? new Date(cart.verifiedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "";
   const statusLine = `${status.pill}${verifiedAtTime ? ` · ${verifiedAtTime}` : ""}`;
 
   return `
@@ -669,58 +667,26 @@ function renderCartCards() {
     const idx = Number(cardEl.getAttribute("data-index"));
     const cart = round.carts[idx];
 
-    // init badges
     updateStickerBadges(cardEl, cart);
-
     cardEl.querySelector(".removeBtn")?.addEventListener("click", () => removeCart(idx));
 
     const supplyName = cardEl.querySelector(".supplyName");
     const supplyExp = cardEl.querySelector(".supplyExp");
-    const checkDate = cardEl.querySelector ".checkDate";
+    const checkDate = cardEl.querySelector(".checkDate");
     const checkedBy = cardEl.querySelector(".checkedBy");
     const drugExp = cardEl.querySelector(".drugExp");
     const drugName = cardEl.querySelector(".drugName");
 
-    supplyName.addEventListener("input", () => {
-      cart.supplyName = supplyName.value;
-      stampEdit(cart);
-      renderAfterEdit(cardEl, cart);
-    });
-
-    supplyExp.addEventListener("change", () => {
-      cart.supplyExp = supplyExp.value;
-      stampEdit(cart);
-      renderAfterEdit(cardEl, cart);
-    });
-
-    checkDate.addEventListener("change", () => {
-      cart.checkDate = checkDate.value;
-      stampEdit(cart);
-      renderAfterEdit(cardEl, cart);
-    });
-
-    checkedBy.addEventListener("input", () => {
-      cart.checkedBy = checkedBy.value;
-      stampEdit(cart);
-      renderAfterEdit(cardEl, cart);
-    });
-
-    drugExp.addEventListener("change", () => {
-      cart.drugExp = drugExp.value;
-      stampEdit(cart);
-      renderAfterEdit(cardEl, cart);
-    });
-
-    drugName.addEventListener("input", () => {
-      cart.drugName = drugName.value;
-      stampEdit(cart);
-      renderAfterEdit(cardEl, cart);
-    });
+    supplyName.addEventListener("input", () => { cart.supplyName = supplyName.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
+    supplyExp.addEventListener("change", () => { cart.supplyExp = supplyExp.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
+    checkDate.addEventListener("change", () => { cart.checkDate = checkDate.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
+    checkedBy.addEventListener("input", () => { cart.checkedBy = checkedBy.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
+    drugExp.addEventListener("change", () => { cart.drugExp = drugExp.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
+    drugName.addEventListener("input", () => { cart.drugName = drugName.value; stampEdit(cart); renderAfterEdit(cardEl, cart); });
 
     wireShiftButtons(cart, cardEl);
     syncIssueUI(cart, cardEl);
 
-    // VERIFI button: save + scroll to setup + focus cart ID
     cardEl.querySelector(".saveStickerBtn")?.addEventListener("click", () => {
       stampEdit(cart);
       saveTechToLocal();
@@ -734,7 +700,7 @@ function renderCartCards() {
   });
 }
 
-/* Summary table render helpers */
+/* Summary table */
 function groupByDepartment(rows) {
   const map = new Map();
   rows.forEach(r => {
@@ -747,6 +713,7 @@ function groupByDepartment(rows) {
 
 function renderNursingTable(targetEl, rows) {
   if (!targetEl) return;
+
   if (rows.length === 0) {
     targetEl.innerHTML = `<div style="color:rgba(234,242,247,.65); padding:10px;">No issues detected.</div>`;
     return;
@@ -791,7 +758,7 @@ function renderNursingTable(targetEl, rows) {
   }).join("");
 }
 
-/* Summary list: auto-sort highest risk first */
+/* Summary view: highest risk first */
 function renderTechNursingLog() {
   const scoped = round.carts.filter(c => c.cartType === round.cartType);
   let rows = showAll ? scoped : scoped.filter(isException);
@@ -835,6 +802,7 @@ function renderImpactMetrics() {
 
   const all = round.carts;
   const verified = all.filter(isCartVerified);
+
   const gaps = countGapsSurfaced(all);
   const paperAvoided = verified.reduce((sum, cart) => sum + pagesPerVerificationForCart(cart), 0);
 
@@ -903,7 +871,6 @@ sortEntryBtn?.addEventListener("click", () => {
   sortRiskBtn?.classList.remove("active");
   renderCartCards();
 });
-
 sortRiskBtn?.addEventListener("click", () => {
   cartSortMode = "risk";
   sortRiskBtn.classList.add("active");
@@ -916,11 +883,9 @@ sortRiskBtn?.addEventListener("click", () => {
 cartTypeTabs?.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-type]");
   if (!btn) return;
-
   round.cartType = btn.getAttribute("data-type");
   document.querySelectorAll("#cartTypeTabs .tab").forEach(t => t.classList.remove("active"));
   btn.classList.add("active");
-
   renderDepartmentOptions();
   saveTechToLocal();
   renderTechAll();
@@ -946,7 +911,6 @@ clearRoundBtn?.addEventListener("click", () => {
 
 exportJsonBtn?.addEventListener("click", () => {
   if (!requireClosedWindowOrConfirm("export")) return;
-
   const all = round.carts;
   const verified = all.filter(isCartVerified);
   const exportRecord = {
@@ -991,9 +955,7 @@ readyToggle?.addEventListener("change", () => {
   }
 });
 
-/* ===========================
-   NURSING MODULE (paper-style)
-=========================== */
+/* Nursing module */
 const nurseUnitName = $("nurseUnitName");
 const nurseMonth = $("nurseMonth");
 const nurseAddRowBtn = $("nurseAddRowBtn");
@@ -1145,12 +1107,13 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
-/* INIT */
+/* Init */
 (function init() {
   loadTechFromLocal();
   renderDepartmentOptions();
 
   if (!round.department) round.department = (DEPARTMENTS[round.cartType] || [])[0] || "";
+
   document.querySelectorAll("#cartTypeTabs .tab").forEach(t => t.classList.remove("active"));
   document.querySelector(`#cartTypeTabs .tab[data-type="${CSS.escape(round.cartType)}"]`)?.classList.add("active");
   if (departmentSelect) departmentSelect.value = round.department;
