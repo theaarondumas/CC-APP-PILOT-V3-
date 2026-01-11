@@ -29,7 +29,7 @@
     ========================== -->
     <div id="techView">
 
-      <!-- ✅ Mission-critical Verification Window -->
+      <!-- Mission-critical Verification Window -->
       <section class="panel windowPanel" id="windowPanel">
         <div class="windowHead">
           <div>
@@ -54,7 +54,7 @@
       <section class="panel">
         <div class="panelRow">
           <div class="panelTitle">Verification Setup (Tech)</div>
-          <div class="panelSub" id="roundMeta">No active verifications</div>
+          <div class="panelSub" id="roundMeta">No carts in progress</div>
         </div>
 
         <div class="controlGrid">
@@ -74,27 +74,39 @@
           </div>
         </div>
 
+        <!-- Add Cart Row -->
         <div class="addCartRow">
-          <input
-            id="cartNumberInput"
-            class="cartInput"
-            placeholder="e.g. CC-3E-014"
-            inputmode="text"
-            autocomplete="off"
-            autocapitalize="characters"
-            spellcheck="false"
-          />
+          <div class="cartInputWrap">
+            <button id="scanBtn" class="iconBtn scanBtn" type="button" aria-label="Scan cart ID" title="Scan (coming soon)">
+              📷
+            </button>
+
+            <input
+              id="cartNumberInput"
+              class="cartInput cartInput--withIcon"
+              type="tel"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              placeholder="Enter cart ID (numbers)"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+          </div>
+
           <button id="addCartBtn" class="pill pill--primary" type="button">Add to Verification</button>
         </div>
 
+        <!-- Toolbar (auto-save happens on sticker edits) -->
         <div class="toolbarRow noPrint">
           <button id="clearRoundBtn" class="pill pill--outline" type="button">Clear</button>
-          <button id="saveRoundBtn" class="pill pill--outline" type="button">Save Verification</button>
           <button id="exportJsonBtn" class="pill pill--outline" type="button">Export Record (JSON)</button>
         </div>
 
         <div class="miniHint">
-          Verify carts as you walk. Exceptions surface automatically. <strong>If it isn’t verified, it doesn’t protect.</strong>
+          Auto-saved as you type. Verify carts as you walk. Exceptions surface automatically.
+          <strong>If it isn’t verified, it doesn’t protect.</strong>
         </div>
       </section>
 
@@ -204,7 +216,7 @@
 
     </div>
 
-    <!-- ✅ Toast -->
+    <!-- Toast -->
     <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   </div>
