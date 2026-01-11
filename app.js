@@ -54,6 +54,7 @@ const cartTypeTabs = $("cartTypeTabs");
 const departmentSelect = $("departmentSelect");
 const cartNumberInput = $("cartNumberInput");
 const addCartBtn = $("addCartBtn");
+const atRiskBtn = $("atRiskBtn"); // NEW
 const clearRoundBtn = $("clearRoundBtn");
 const exportJsonBtn = $("exportJsonBtn");
 const readyToggle = $("readyToggle");
@@ -313,6 +314,21 @@ function scrollToFirstNonCompliantCard() {
   setTimeout(() => {
     const el = cartList?.querySelector(`.cartCard[data-index="${first}"]`);
     if (el) scrollToEl(el);
+  }, 80);
+}
+
+/* NEW: AT RISK scroll (anything riskScore < 3) */
+function scrollToFirstAtRiskCard() {
+  const indices = round.carts.map((_, i) => i);
+  indices.sort((ia, ib) => sortByHighestRiskFirst(round.carts[ia], round.carts[ib]));
+  const first = indices.find(i => riskSortScore(round.carts[i]) < 3);
+  if (first === undefined) { showToast("All carts compliant."); return; }
+  setTimeout(() => {
+    const el = cartList?.querySelector(`.cartCard[data-index="${first}"]`);
+    if (el) {
+      scrollToEl(el);
+      showToast("At-risk cart surfaced.");
+    }
   }, 80);
 }
 
@@ -685,6 +701,15 @@ departmentSelect?.addEventListener("change", ()=>{
 
 addCartBtn?.addEventListener("click", ()=> addCart(cartNumberInput.value));
 cartNumberInput?.addEventListener("keydown", (e)=>{ if (e.key==="Enter") addCart(cartNumberInput.value); });
+
+/* NEW: AT RISK button behavior (does not change your model) */
+atRiskBtn?.addEventListener("click", ()=>{
+  cartSortMode = "risk";
+  sortRiskBtn?.classList.add("active");
+  sortEntryBtn?.classList.remove("active");
+  renderCartCards();
+  scrollToFirstAtRiskCard();
+});
 
 clearRoundBtn?.addEventListener("click", ()=>{
   if (!confirm("Reset this verification? This clears all carts on this screen.")) return;
