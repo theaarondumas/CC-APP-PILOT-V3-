@@ -1,11 +1,21 @@
-/* styles.css (DROP IN) */
+/* styles.css (DROP IN) — Option A (Green/White/Blue) + Green glow when Verification Window is OPEN */
+
 :root{
   --bg0:#0b0f12;
   --stroke:rgba(255,255,255,.10);
   --text:#eaf2f7;
   --muted:rgba(234,242,247,.65);
-  --lime:#c8d53a;
-  --orange:#f4a21b;
+
+  --accentBlue: rgba(46, 155, 255, 0.85);
+  --accentBlueSoft: rgba(46, 155, 255, 0.18);
+
+  --successGreen: rgba(43, 182, 115, 0.92);
+  --successGreenSoft: rgba(43, 182, 115, 0.18);
+
+  /* keep legacy names so nothing breaks */
+  --lime:#cfeee0;     /* mint green paper */
+  --orange:#d6e9ff;   /* clinical blue paper */
+
   --verifiRed:#b00000;
 }
 
@@ -13,7 +23,9 @@
 html,body{ height:100%; }
 body{
   margin:0;
-  background: radial-gradient(1200px 800px at 50% -200px, #1a2b2f 0%, var(--bg0) 60%);
+  background:
+    radial-gradient(1200px 800px at 50% -200px, rgba(46,155,255,.18) 0%, rgba(11,15,18,1) 60%),
+    radial-gradient(900px 600px at 80% 10%, rgba(43,182,115,.10) 0%, rgba(11,15,18,0) 55%);
   color:var(--text);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
@@ -78,6 +90,7 @@ body{
   gap:10px;
 }
 .pill--toggle input{ display:none; }
+
 .toggleTrack{
   width:42px; height:24px;
   border-radius:999px;
@@ -89,14 +102,37 @@ body{
   content:"";
   width:18px; height:18px;
   border-radius:999px;
-  background: rgba(255,255,255,.75);
+  background: rgba(255,255,255,.78);
   position:absolute;
   top:2px; left:2px;
   transition: all .18s ease;
 }
+
+/* knob slide */
 #readyToggle:checked + .toggleTrack::after,
 #showAllToggle:checked + .toggleTrack::after{ left:20px; }
+
 .toggleLabel{ color:var(--muted); font-weight:900; }
+
+/* =========================
+   Verification Window ACTIVE glow (GREEN)
+========================= */
+#readyToggle:checked + .toggleTrack{
+  background: var(--successGreenSoft);
+  border-color: rgba(43,182,115,.45);
+  box-shadow:
+    0 0 0 1px rgba(43,182,115,.35),
+    0 0 14px rgba(43,182,115,.35);
+}
+#readyToggle:checked + .toggleTrack::after{
+  background: rgba(255,255,255,.95);
+}
+
+/* Show-all toggle (BLUE) */
+#showAllToggle:checked + .toggleTrack{
+  background: rgba(46,155,255,.14);
+  border-color: rgba(46,155,255,.24);
+}
 
 /* Segmented nav (Tech / Nursing) */
 .seg{
@@ -116,8 +152,9 @@ body{
   cursor:pointer;
 }
 .segBtn.active{
-  background: rgba(255,255,255,.10);
+  background: var(--accentBlueSoft);
   color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(46,155,255,.24);
 }
 
 /* =========================
@@ -156,6 +193,7 @@ body{
   .controlGrid{ grid-template-columns: 1.2fr .8fr; }
 }
 
+/* Tabs */
 .tabs{
   display:flex;
   gap:8px;
@@ -171,7 +209,11 @@ body{
   font-size:12px;
   cursor:pointer;
 }
-.tab.active{ background: rgba(255,255,255,.12); }
+.tab.active{
+  background: var(--accentBlueSoft);
+  border-color: rgba(46,155,255,.28);
+  box-shadow: inset 0 0 0 1px rgba(46,155,255,.18);
+}
 
 .select{
   width:100%;
@@ -256,10 +298,10 @@ body{
   background: rgba(0,0,0,.14);
 }
 
-/* highlight newest/current cart */
+/* current cart highlight = BLUE */
 .cartCard.current{
-  border-color: rgba(255,255,255,.22);
-  box-shadow: 0 0 0 2px rgba(255,255,255,.08), 0 18px 40px rgba(0,0,0,.25);
+  border-color: rgba(46,155,255,.35);
+  box-shadow: 0 0 0 2px rgba(46,155,255,.14), 0 18px 40px rgba(0,0,0,.25);
 }
 
 .cartHeader{
@@ -287,13 +329,13 @@ body{
 }
 
 /* =========================
-   STICKERS
+   STICKERS (green + blue paper)
 ========================= */
 .sticker{
   border-radius:18px;
   padding:16px 16px 14px;
-  box-shadow: 0 18px 40px rgba(0,0,0,.35);
-  border: 1px solid rgba(0,0,0,.18);
+  box-shadow: 0 18px 40px rgba(0,0,0,.30);
+  border: 1px solid rgba(0,0,0,.10);
   margin-top:10px;
 }
 .sticker--lime{ background: var(--lime); color:#0a0b0c; }
@@ -314,7 +356,7 @@ body{
 }
 .sticker__rule{
   height:2px;
-  background: rgba(0,0,0,.25);
+  background: rgba(0,0,0,.20);
   border-radius:2px;
   margin: 8px 0 14px;
 }
@@ -336,7 +378,7 @@ body{
   width:100%;
   border:none;
   background: transparent;
-  border-bottom: 3px solid rgba(0,0,0,.35);
+  border-bottom: 3px solid rgba(0,0,0,.28);
   padding: 6px 2px 6px;
   font-size:16px;
   font-weight:900;
@@ -368,10 +410,10 @@ body{
 .issueNoteInput{
   width:100%;
   border-radius:12px;
-  border:1px solid rgba(0,0,0,.25);
+  border:1px solid rgba(0,0,0,.18);
   padding:10px 12px;
   font-weight:900;
-  background: rgba(255,255,255,.35);
+  background: rgba(255,255,255,.55);
   outline:none;
 }
 
@@ -388,8 +430,8 @@ body{
 }
 .shiftPills{ display:flex; gap:6px; }
 .shiftBtn{
-  border:1px solid rgba(0,0,0,.20);
-  background: rgba(255,255,255,.25);
+  border:1px solid rgba(0,0,0,.18);
+  background: rgba(255,255,255,.55);
   color: #0a0b0c;
   border-radius:999px;
   padding:4px 10px;
@@ -398,18 +440,16 @@ body{
   cursor:pointer;
 }
 .shiftBtn.active{
-  background: rgba(255,255,255,.65);
-  border-color: rgba(0,0,0,.35);
+  background: rgba(255,255,255,.85);
+  border-color: rgba(0,0,0,.25);
 }
 
-/* Sticker footer button */
+/* Sticker footer + VERIFI button */
 .stickerFooter{
   display:flex;
   justify-content:flex-end;
   margin-top:10px;
 }
-
-/* VERIFI button (ALL CAPS, RED) */
 .saveStickerBtn{
   border-radius:999px;
   padding:10px 16px;
@@ -417,13 +457,13 @@ body{
   font-size:13px;
   letter-spacing:1px;
   border:2px solid rgba(176,0,0,.65);
-  background: rgba(255,255,255,.55);
+  background: rgba(255,255,255,.70);
   color: var(--verifiRed);
   cursor:pointer;
 }
 .saveStickerBtn:active{
   transform: scale(.98);
-  background: rgba(255,255,255,.75);
+  background: rgba(255,255,255,.85);
 }
 
 /* =========================
@@ -464,6 +504,7 @@ body{
   color: var(--text);
 }
 
+/* status pills (colored) */
 .statusPill{
   display:inline-flex;
   align-items:center;
@@ -474,10 +515,22 @@ body{
   border:1px solid var(--stroke);
   background: rgba(255,255,255,.04);
 }
-.statusPill.verified{ opacity:.95; }
-.statusPill.pending{ opacity:.92; }
-.statusPill.notVerified{ opacity:.98; }
-.statusPill.review{ opacity:.98; }
+.statusPill.verified{
+  border-color: rgba(43,182,115,.35);
+  background: rgba(43,182,115,.14);
+}
+.statusPill.pending{
+  border-color: rgba(46,155,255,.35);
+  background: rgba(46,155,255,.12);
+}
+.statusPill.notVerified{
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.04);
+}
+.statusPill.review{
+  border-color: rgba(176,0,0,.30);
+  background: rgba(176,0,0,.10);
+}
 
 /* =========================
    NURSING PAPER TABLE
@@ -545,7 +598,6 @@ body{
    GLOBAL
 ========================= */
 .hidden{ display:none; }
-
 #nursingLogPrintArea{ display:none; }
 #nursePrintArea{ display:none; }
 
