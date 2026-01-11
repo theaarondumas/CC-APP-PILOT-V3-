@@ -83,9 +83,7 @@ body{
   background: rgba(86, 205, 255, .18);
   border-color: rgba(86, 205, 255, .32);
 }
-.pill--primary:hover{
-  filter: brightness(1.04);
-}
+.pill--primary:hover{ filter: brightness(1.04); }
 
 .pill--toggle{
   position:relative;
@@ -172,7 +170,7 @@ body{
 }
 
 /* =========================
-   VERIFICATION WINDOW (Mission-critical)
+   VERIFICATION WINDOW
 ========================= */
 .windowPanel{
   border-color: rgba(86, 205, 255, .24);
@@ -241,11 +239,22 @@ body{
   font-weight:900;
 }
 
+/* Add cart row */
 .addCartRow{
   display:flex;
   gap:10px;
   margin-top:12px;
+  align-items:center;
 }
+
+/* input wrap with scan icon */
+.cartInputWrap{
+  flex:1;
+  position:relative;
+  display:flex;
+  align-items:center;
+}
+
 .cartInput{
   flex:1;
   padding:10px 12px;
@@ -255,6 +264,33 @@ body{
   color: var(--text);
   font-weight:900;
   font-size:14px;
+}
+
+/* scan button inside input */
+.iconBtn{
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius:12px;
+  padding:8px 10px;
+  font-weight:900;
+  cursor:pointer;
+}
+.scanBtn{
+  position:absolute;
+  left:10px;
+  height:34px;
+  min-width:34px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:12px;
+  padding:0;
+  opacity:.95;
+}
+
+.cartInput--withIcon{
+  padding-left:54px;
 }
 
 .toolbarRow{
@@ -314,6 +350,12 @@ body{
   background: rgba(0,0,0,.14);
 }
 
+/* highlight newest/current cart */
+.cartCard.current{
+  border-color: rgba(86, 205, 255, .35);
+  box-shadow: 0 0 0 2px rgba(86, 205, 255, .14), 0 18px 40px rgba(0,0,0,.25);
+}
+
 .cartHeader{
   display:flex;
   justify-content:space-between;
@@ -333,15 +375,6 @@ body{
 .cartActions{
   display:flex;
   gap:8px;
-}
-.iconBtn{
-  border:1px solid var(--stroke);
-  background: rgba(255,255,255,.04);
-  color: var(--text);
-  border-radius:12px;
-  padding:8px 10px;
-  font-weight:900;
-  cursor:pointer;
 }
 
 /* =========================
@@ -517,7 +550,7 @@ body{
 .statusPill.review{ opacity:.98; }
 
 /* =========================
-   NURSING PAPER TABLE (Separate screen)
+   NURSING PAPER TABLE
 ========================= */
 .paperTable{
   width:100%;
@@ -542,9 +575,7 @@ body{
   text-align:left;
   padding-left:10px;
 }
-.paperChk{
-  transform: scale(1.2);
-}
+.paperChk{ transform: scale(1.2); }
 .paperInput{
   width:100%;
   border-radius:10px;
