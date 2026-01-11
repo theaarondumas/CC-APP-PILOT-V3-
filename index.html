@@ -38,7 +38,7 @@
     <div id="techView">
 
       <!-- Verification Controls -->
-      <section class="panel" id="verificationSetup">
+      <section class="panel" id="verificationSetupPanel">
         <div class="panelRow">
           <div class="panelTitle">Verification Setup (Tech)</div>
           <div class="panelSub" id="roundMeta">No carts in progress</div>
@@ -83,7 +83,8 @@
         </div>
 
         <div class="miniHint">
-          Verify carts as you walk. Exceptions surface automatically. If it isn’t verified, it doesn’t protect.
+          Verify carts as you walk. Exceptions surface automatically.
+          <strong>If it isn’t verified, it doesn’t protect.</strong>
         </div>
       </section>
 
@@ -196,7 +197,7 @@
   <!-- Toast -->
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Cache-bust this when you deploy updates by changing the v= number -->
-  <script src="app.js?v=20260110-02"></script>
+  <!-- Cache-bust: bump v= after deploy if iPhone Safari caches -->
+  <script src="app.js?v=2"></script>
 </body>
 </html>
