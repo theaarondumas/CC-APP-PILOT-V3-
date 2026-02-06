@@ -76,5 +76,31 @@
       <div class="item">• Yesterday — 23 verifications completed</div>
     </div>
   </div>
+  <script>
+function loadMetrics() {
+  const records = JSON.parse(localStorage.getItem("verifi_records") || "[]");
+
+  const verified = records.length;
+  const followUp = records.filter(r => r.needsFollowUp).length;
+
+  document.getElementById("m_verified").textContent = verified;
+  document.getElementById("m_followup").textContent = followUp;
+
+  const activityBox = document.getElementById("activity");
+  activityBox.innerHTML = "";
+  records.slice(-5).reverse().forEach(r => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.textContent = "• " + r.cartId + " verified";
+    activityBox.appendChild(div);
+  });
+}
+
+loadMetrics();
+</script>
+
+</body>
+</html>
+
 </body>
 </html>
