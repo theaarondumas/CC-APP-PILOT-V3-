@@ -5,27 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VERIFI — Executive Dashboard</title>
 
-  <!-- Keep your existing stylesheet for consistent vibe -->
-  <link rel="stylesheet" href="styles.css?v=1" />
+  <link rel="stylesheet" href="styles.css?v=2" />
 
   <style>
     .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
-    .top h1 { margin: 0; font-size: 32px; letter-spacing: 0.5px; }
+    .top h1 { margin: 0; font-size: 32px; letter-spacing: 0.5px; color:#fff; }
     .top p { margin: 6px 0 0; color: #9aa0a6; }
     .nav { margin-top: 10px; }
-    .nav a { text-decoration: none; font-weight: 800; }
+    .nav a { text-decoration: none; font-weight: 900; }
 
     .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 18px 0 22px; }
-    .card { border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 16px; background: rgba(255,255,255,0.06); backdrop-filter: blur(8px); }
+    .card { border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 16px; background: rgba(255,255,255,0.06); backdrop-filter: blur(8px); }
     .label { font-size: 12px; color: #c6cbd1; margin-bottom: 8px; }
-    .value { font-size: 28px; font-weight: 900; color: #fff; }
+    .value { font-size: 30px; font-weight: 950; color: #fff; }
 
-    .sectionTitle { font-size: 18px; font-weight: 900; margin: 18px 0 10px; color: #fff; display:flex; align-items:center; gap:10px; }
+    .sectionTitle { font-size: 18px; font-weight: 950; margin: 18px 0 10px; color: #fff; display:flex; align-items:center; gap:10px; }
     .badge { display:inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px; border:1px solid rgba(255,255,255,0.18); color:#fff; }
     .warn { background: rgba(255, 200, 0, 0.12); border-color: rgba(255, 200, 0, 0.35); }
     .ok { background: rgba(0, 255, 120, 0.10); border-color: rgba(0, 255, 120, 0.25); }
 
-    .list { border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 14px 16px; background: rgba(255,255,255,0.06); }
+    .list { border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px 16px; background: rgba(255,255,255,0.06); }
     .item { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.08); color: #fff; }
     .item:last-child { border-bottom: 0; }
     .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -33,8 +32,7 @@
     .muted { color: #c6cbd1; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
-    /* Debug panel */
-    .debug { margin-top: 18px; border-radius: 12px; padding: 12px 14px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.25); color:#fff; }
+    .debug { margin-top: 18px; border-radius: 14px; padding: 12px 14px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.25); color:#fff; }
     .debug h3 { margin: 0 0 8px; font-size: 14px; }
     .debug .small { font-size: 12px; color:#c6cbd1; line-height:1.35; }
     .debug .keys { margin-top: 8px; font-size: 12px; line-height: 1.4; }
@@ -49,7 +47,6 @@
       <div class="nav"><a href="index.html">← Back</a></div>
     </div>
 
-    <!-- Metric Cards -->
     <div class="grid">
       <div class="card">
         <div class="label">Checks Completed (This Week)</div>
@@ -69,24 +66,19 @@
       </div>
     </div>
 
-    <!-- Needs Attention -->
     <div class="sectionTitle">Needs Attention <span class="badge warn">Open</span></div>
     <div class="list" id="needs_attention">
-      <div class="item muted">No open items detected yet.</div>
+      <div class="item muted">No items detected yet.</div>
     </div>
 
-    <!-- Activity -->
     <div class="sectionTitle">Recent Activity <span class="badge ok">Live Log</span></div>
     <div class="list" id="activity">
       <div class="item muted">No recent activity detected yet.</div>
     </div>
 
-    <!-- Debug -->
     <div class="debug" id="debugPanel">
       <h3>Debug (This Device)</h3>
-      <div class="small">
-        If metrics stay at 0, this panel will show which localStorage key your VERIFI app is actually using.
-      </div>
+      <div class="small">This shows which localStorage key the dashboard is reading on your iPhone.</div>
       <div class="keys mono" id="debugKeys">(loading…)</div>
       <div class="small" style="margin-top:8px;">
         <b>Picked key:</b> <span class="mono" id="debugPicked">—</span>
@@ -95,10 +87,8 @@
   </div>
 
   <script>
-    // --------- Safe helpers ----------
-    function safeParseJSON(str) {
-      try { return JSON.parse(str); } catch { return null; }
-    }
+    // ---------- helpers ----------
+    function safeParseJSON(str) { try { return JSON.parse(str); } catch { return null; } }
 
     function isNoiseKey(k) {
       const s = String(k).toLowerCase();
@@ -109,22 +99,15 @@
       const s = String(k).toLowerCase();
       if (isNoiseKey(s)) return false;
       return (
-        s.includes("verifi") ||
-        s.includes("crash") ||
-        s.includes("cart") ||
-        s.includes("nurse") ||
-        s.includes("round") ||
-        s.includes("pilot") ||
-        s.includes("cc")
+        s.includes("verifi") || s.includes("crash") || s.includes("cart") ||
+        s.includes("nurse")  || s.includes("round") || s.includes("pilot") || s.includes("cc")
       );
     }
 
     function scoreCandidate(obj) {
       let score = 0;
-
       if (Array.isArray(obj)) {
-        score += 15;
-        score += Math.min(30, obj.length);
+        score += 15 + Math.min(30, obj.length);
         const sample = obj[0] || {};
         const keys = Object.keys(sample || {}).map(k => k.toLowerCase());
         if (keys.some(k => k.includes("cart") || k.includes("department") || k.includes("unit"))) score += 20;
@@ -136,28 +119,47 @@
         const topKeys = Object.keys(obj).map(k => k.toLowerCase());
         if (topKeys.some(k => k.includes("carts") || k.includes("verifications") || k.includes("records"))) score += 20;
         if (topKeys.some(k => k.includes("round") || k.includes("log") || k.includes("audit"))) score += 14;
-        for (const k of Object.keys(obj)) {
-          if (Array.isArray(obj[k])) score += 10;
-        }
+        for (const k of Object.keys(obj)) if (Array.isArray(obj[k])) score += 10;
       }
       return score;
     }
 
     function extractRecords(candidateObj) {
       if (Array.isArray(candidateObj)) return candidateObj;
-
       if (candidateObj && typeof candidateObj === "object") {
         if (Array.isArray(candidateObj.records)) return candidateObj.records;
         if (Array.isArray(candidateObj.verifications)) return candidateObj.verifications;
         if (Array.isArray(candidateObj.carts)) return candidateObj.carts;
         if (Array.isArray(candidateObj.items)) return candidateObj.items;
-
-        // first non-empty array
         for (const k of Object.keys(candidateObj)) {
           if (Array.isArray(candidateObj[k]) && candidateObj[k].length) return candidateObj[k];
         }
       }
       return [];
+    }
+
+    function parseDateMaybe(v) {
+      if (!v) return null;
+      if (v instanceof Date) return v;
+
+      if (typeof v === "number") {
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      if (typeof v === "string") {
+        let d = new Date(v);
+        if (!isNaN(d.getTime())) return d;
+        d = new Date(Date.parse(v));
+        if (!isNaN(d.getTime())) return d;
+      }
+      return null;
+    }
+
+    function daysUntil(d) {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const end = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      return Math.round((end - start) / (1000 * 60 * 60 * 24));
     }
 
     function getRecordId(r) {
@@ -168,57 +170,116 @@
       return r?.updatedAt || r?.updated_at || r?.timestamp || r?.time || r?.date || "";
     }
 
-    function isFollowUp(r) {
+    // ✅ YOUR “ATTENTION REQUIRED” detector:
+    // - flags exception/needs review/at risk
+    // - OR reads a stored "days" / "attention" field
+    // - OR computes from expiration date (<= 30 days)
+    function isAttention(r) {
       if (!r || typeof r !== "object") return false;
+
+      // 1) explicit exception-like booleans
+      const exceptionHints = ["exception", "needsreview", "needs_review", "atrisk", "at_risk"];
       for (const k of Object.keys(r)) {
         const lk = k.toLowerCase();
-        if (lk.includes("risk") || lk.includes("exception") || lk.includes("follow")) {
+        if (exceptionHints.some(h => lk.includes(h))) {
           const v = r[k];
-          if (v === true) return true;
-          if (typeof v === "string" && v.toLowerCase().includes("true")) return true;
-          if (typeof v === "string" && (v.toLowerCase().includes("risk") || v.toLowerCase().includes("exception"))) return true;
+          if (v === true || v === 1) return true;
+          if (typeof v === "string" && ["true","yes","y","1"].includes(v.toLowerCase())) return true;
         }
       }
+
+      // 2) stored "attention required" or days remaining
+      for (const k of Object.keys(r)) {
+        const lk = k.toLowerCase();
+        if (lk.includes("attention") || lk.includes("daysremaining") || lk === "days") {
+          const v = r[k];
+          const n = typeof v === "number" ? v : parseInt(String(v), 10);
+          if (!isNaN(n) && n <= 30) return true;
+        }
+      }
+
+      // 3) compute from expiration date
+      let exp = null;
+      for (const k of Object.keys(r)) {
+        const lk = k.toLowerCase();
+        if (lk.includes("expiration") || lk.includes("expiry") || lk.includes("expdate") || lk === "exp" || lk.endsWith("exp")) {
+          const d = parseDateMaybe(r[k]);
+          if (d) { exp = d; break; }
+        }
+      }
+
+      if (exp) {
+        const du = daysUntil(exp);
+        return du <= 30;
+      }
+
       return false;
     }
 
-    function renderList(el, rows) {
-      el.innerHTML = "";
-      if (!rows.length) {
-        const div = document.createElement("div");
-        div.className = "item muted";
-        div.textContent = "No items detected yet.";
-        el.appendChild(div);
+    function renderAttention(records) {
+      const el = document.getElementById("needs_attention");
+      const items = (records || []).filter(isAttention);
+
+      if (!items.length) {
+        el.innerHTML = '<div class="item muted">No items detected yet.</div>';
         return;
       }
-      rows.forEach(row => {
-        const div = document.createElement("div");
-        div.className = "item row";
-        div.innerHTML = `
-          <div>${row.left}</div>
-          ${row.right ? `<span class="badge warn">${row.right}</span>` : ""}
+
+      const rows = items.slice(-6).reverse().map(r => {
+        // try to show the actual X DAYS
+        let exp = null;
+        for (const k of Object.keys(r || {})) {
+          const lk = k.toLowerCase();
+          if (lk.includes("expiration") || lk.includes("expiry") || lk.includes("exp")) {
+            exp = parseDateMaybe(r[k]);
+            if (exp) break;
+          }
+        }
+        const days = exp ? daysUntil(exp) : null;
+        const label = (days !== null && !isNaN(days)) ? `ATTENTION REQUIRED · ${days} DAYS` : "Needs review";
+
+        return `
+          <div class="item row">
+            <div>⚠️ ${getRecordId(r)} → ${label}</div>
+            <span class="badge warn">Needs Follow-Up</span>
+          </div>
         `;
-        el.appendChild(div);
       });
+
+      el.innerHTML = rows.join("");
+    }
+
+    function renderActivity(records) {
+      const el = document.getElementById("activity");
+      const last = (records || []).slice(-6).reverse();
+
+      if (!last.length) {
+        el.innerHTML = '<div class="item muted">No recent activity detected yet.</div>';
+        return;
+      }
+
+      el.innerHTML = last.map(r => {
+        const when = getRecordWhen(r);
+        const id = getRecordId(r);
+        const text = when ? `• ${when} — ${id} updated` : `• ${id} updated`;
+        return `<div class="item">${text}</div>`;
+      }).join("");
     }
 
     function loadDashboard() {
       const allKeys = Object.keys(localStorage || {});
-      const filtered = allKeys
+      const candidates = allKeys
         .filter(isLikelyAppKey)
         .map(k => ({ key: k, len: (localStorage.getItem(k) || "").length }))
         .sort((a,b) => b.len - a.len);
 
-      // Debug list of keys
-      const debugKeysEl = document.getElementById("debugKeys");
-      debugKeysEl.innerHTML = filtered.length
-        ? filtered.map(x => `${x.key} — ${x.len} chars`).join("<br/>")
+      document.getElementById("debugKeys").innerHTML = candidates.length
+        ? candidates.map(x => `${x.key} — ${x.len} chars`).join("<br/>")
         : "(No VERIFI-looking keys found yet)";
 
-      // Pick best JSON candidate
       let best = { key: null, obj: null, score: -1 };
 
-      for (const info of filtered) {
+      for (const info of candidates) {
         const raw = localStorage.getItem(info.key);
         const parsed = safeParseJSON(raw);
         if (!parsed) continue;
@@ -230,13 +291,14 @@
 
       const records = extractRecords(best.obj);
       const verifiedCount = Array.isArray(records) ? records.length : 0;
-      const followUpCount = (records || []).filter(isFollowUp).length;
 
-      // Update metrics
+      // Needs follow-up count = attention count
+      const attentionCount = (records || []).filter(isAttention).length;
+
       document.getElementById("m_verified").textContent = String(verifiedCount);
-      document.getElementById("m_followup").textContent = String(followUpCount);
+      document.getElementById("m_followup").textContent = String(attentionCount);
 
-      // Active users heuristic (based on any tech/user/name-ish fields)
+      // Active users heuristic
       const users = new Set();
       (records || []).forEach(r => {
         const u = r?.tech || r?.techName || r?.checkedBy || r?.user || r?.initials;
@@ -244,50 +306,12 @@
       });
       document.getElementById("m_users").textContent = users.size ? String(users.size) : "—";
 
-      // Avg time to resolve: placeholder until we can find your timestamps reliably
       document.getElementById("m_ttr").textContent = "—";
 
-      // Needs attention list (show up to 5 follow-up items)
-      const attention = (records || [])
-        .filter(isFollowUp)
-        .slice(-5)
-        .reverse()
-        .map(r => ({
-          left: `⚠️ ${getRecordId(r)} → Needs review`,
-          right: "Needs Follow-Up"
-        }));
-
-      renderList(document.getElementById("needs_attention"), attention);
-
-      // Recent activity (last 6 records)
-      const activity = (records || [])
-        .slice(-6)
-        .reverse()
-        .map(r => {
-          const when = getRecordWhen(r);
-          const id = getRecordId(r);
-          const label = when ? `${when} — ${id} updated` : `${id} updated`;
-          return { left: `• ${label}` };
-        });
-
-      const activityEl = document.getElementById("activity");
-      activityEl.innerHTML = "";
-      if (!activity.length) {
-        const div = document.createElement("div");
-        div.className = "item muted";
-        div.textContent = "No recent activity detected yet.";
-        activityEl.appendChild(div);
-      } else {
-        activity.forEach(a => {
-          const div = document.createElement("div");
-          div.className = "item";
-          div.textContent = a.left.replace("• ", "• ");
-          activityEl.appendChild(div);
-        });
-      }
+      renderAttention(records);
+      renderActivity(records);
     }
 
-    // Run once on load
     loadDashboard();
   </script>
 </body>
