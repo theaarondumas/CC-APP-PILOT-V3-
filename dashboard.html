@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VERIFI — Executive Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .top h1 { margin: 0; font-size: 32px; }
+    .top p { margin: 6px 0 0; color: #666; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 18px 0 22px; }
+    .card { border: 1px solid #e3e3e3; border-radius: 12px; padding: 16px; background: #fff; }
+    .label { font-size: 12px; color: #666; margin-bottom: 8px; }
+    .value { font-size: 28px; font-weight: 800; }
+    .sectionTitle { font-size: 18px; font-weight: 800; margin: 18px 0 10px; }
+    .list { border: 1px solid #e3e3e3; border-radius: 12px; padding: 14px 16px; background: #fff; }
+    .item { padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
+    .item:last-child { border-bottom: 0; }
+    .badge { display:inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px; border:1px solid #ddd; margin-left:8px; }
+    .warn { border-color:#f0c36d; background:#fff8e6; }
+    .ok { border-color:#cde7d8; background:#f0fff6; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    a { color: inherit; }
+    .nav { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <h1>VERIFI</h1>
+      <p>Executive Overview — This Week</p>
+      <div class="nav"><a href="index.html">← Back</a></div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="label">Checks Completed (This Week)</div>
+        <div class="value" id="m_verified">128</div>
+      </div>
+      <div class="card">
+        <div class="label">Needs Follow-Up</div>
+        <div class="value" id="m_followup">6</div>
+      </div>
+      <div class="card">
+        <div class="label">Avg Time to Resolve</div>
+        <div class="value" id="m_ttr">3h 12m</div>
+      </div>
+      <div class="card">
+        <div class="label">Active Users</div>
+        <div class="value" id="m_users">14</div>
+      </div>
+    </div>
+
+    <div class="sectionTitle">Needs Attention <span class="badge warn">Open</span></div>
+    <div class="list" id="needs_attention">
+      <div class="item row">
+        <div>⚠️ Crash Cart — ICU West → Expiration mismatch</div>
+        <span class="badge warn">Needs Follow-Up</span>
+      </div>
+      <div class="item row">
+        <div>⚠️ OR Supply Room → Missing verification</div>
+        <span class="badge warn">Needs Follow-Up</span>
+      </div>
+      <div class="item row">
+        <div>⚠️ PO #10482 → Awaiting vendor confirmation</div>
+        <span class="badge warn">Needs Follow-Up</span>
+      </div>
+    </div>
+
+    <div class="sectionTitle">Recent Activity <span class="badge ok">Live Log</span></div>
+    <div class="list" id="activity">
+      <div class="item">• 2:14 PM — Crash Cart ICU verified</div>
+      <div class="item">• 1:02 PM — PO 10482 flagged for follow-up</div>
+      <div class="item">• 11:45 AM — ER crash cart verified</div>
+      <div class="item">• Yesterday — 23 verifications completed</div>
+    </div>
+  </div>
+</body>
+</html>
